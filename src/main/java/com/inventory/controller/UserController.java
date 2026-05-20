@@ -47,14 +47,10 @@ public class UserController {
         return userService.registerUser(actualizarPSWUsuarioDto);
     }
 
-    /**
-     * Endpoint público para registrar clientes desde el landing page
-     * El email se usa como username y automáticamente se asigna el rol CLIENTE
-     */
     @PostMapping("/register-client")
     public ResponseEntity<?> registerClient(@RequestBody ClientRegisterRequest request) {
         try {
-            // Validaciones manuales
+            // ── Validaciones ────────────────────────────────────────────────
             if (request.getEmail() == null || request.getEmail().trim().isEmpty()) {
                 return ResponseEntity.badRequest().body(Map.of("error", "El correo electrónico es obligatorio"));
             }
@@ -70,13 +66,22 @@ public class UserController {
             if (request.getLastName() == null || request.getLastName().trim().isEmpty()) {
                 return ResponseEntity.badRequest().body(Map.of("error", "El apellido es obligatorio"));
             }
+            if (request.getDocumento() == null || request.getDocumento().trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "El número de documento es obligatorio"));
+            }
+            if (!request.getDocumento().trim().matches("^[A-Za-z0-9\\-]{3,20}$")) {
+                return ResponseEntity.badRequest().body(Map.of("error", "El número de documento no es válido"));
+            }
 
             User newClient = userService.registerClient(
-                request.getEmail().trim().toLowerCase(), // Normalizar email
+                request.getEmail().trim().toLowerCase(),
                 request.getPassword(),
                 request.getFirstName().trim(),
                 request.getLastName().trim(),
-                request.getTelefono()
+                request.getTelefono(),
+                request.getDocumento().trim(),
+                request.getTipoDocumento(),
+                request.getDireccion() != null ? request.getDireccion().trim() : null
             );
 
             Map<String, String> response = new HashMap<>();
@@ -86,7 +91,7 @@ public class UserController {
             response.put("fullName", newClient.getFirstName() + " " + newClient.getLastName());
 
             logger.info("Nuevo cliente registrado: {}", newClient.getEmail());
-            
+
             return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
             logger.error("Error al registrar cliente: {}", e.getMessage());

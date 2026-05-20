@@ -2,10 +2,17 @@ package com.inventory.service;
 
 import com.inventory.dto.UpdatePswUserDto;
 import com.inventory.dto.UserDto;
+import com.inventory.model.CategoryClient;
+import com.inventory.model.Cliente;
+import com.inventory.model.DocumentoTipo;
 import com.inventory.model.Rol;
 import com.inventory.model.User;
+import com.inventory.repository.CategoryClientRepository;
+import com.inventory.repository.ClienteRepository;
+import com.inventory.repository.DocumentoTipoRepository;
 import com.inventory.repository.RolesRepository;
 import com.inventory.repository.UserRepository;
+import jakarta.transaction.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -42,6 +49,15 @@ public class UsuarioService implements UserDetailsService {
 
     @Autowired
     private RolesRepository roleRepository;
+
+    @Autowired
+    private ClienteRepository clienteRepository;
+
+    @Autowired
+    private CategoryClientRepository categoryClientRepository;
+
+    @Autowired
+    private DocumentoTipoRepository documentoTipoRepository;
 
     public User registerUser(UpdatePswUserDto actualizarUsuariosDto) {
         // Verificamos si el rol existe por nombre (usando el DTO para obtener el nombre)
@@ -235,31 +251,55 @@ public class UsuarioService implements UserDetailsService {
     }
 
     /**
-     * Registra un nuevo cliente desde el landing page
-     * El email se usa como username y automáticamente se asigna el rol CLIENTE
+     * Registra un nuevo cliente desde el landing page.
+     * Crea el registro en la tabla {@code usuarios} (autenticación) y en
+     * la tabla {@code clientes} (entidad de negocio) de forma atómica.
      */
-    public User registerClient(String email, String password, String firstName, String lastName, String telefono) {
-        // Validar que el email no exista como username
+    @Transactional
+    public User registerClient(String email, String password, String firstName, String lastName,
+                               String telefono, String documento, String tipoDocumentoId,
+                               String direccion) {
+        // ── 1. Validar unicidad de email/username ────────────────────────────
         if (userRepository.findByUsername(email).isPresent()) {
             throw new IllegalArgumentException("Ya existe un usuario registrado con este correo electrónico");
         }
 
-        // Buscar el rol CLIENTE
+        // ── 2. Validar unicidad del documento en la tabla clientes ───────────
+        String tdId = (tipoDocumentoId != null && !tipoDocumentoId.isBlank()) ? tipoDocumentoId.toUpperCase() : "CC";
+        if (clienteRepository.existsByIdAndTipoDocumentoId(documento, tdId)) {
+            throw new IllegalArgumentException("Ya existe un cliente registrado con ese número de documento");
+        }
+
+        // ── 3. Resolver dependencias ─────────────────────────────────────────
         Rol clientRole = roleRepository.findByName("CLIENTE");
         if (clientRole == null) {
             throw new IllegalStateException("El rol CLIENTE no existe en el sistema. Contacte al administrador.");
         }
 
-        // Crear el nuevo usuario
+        DocumentoTipo tipoDoc = documentoTipoRepository.findById(tdId)
+                .orElseThrow(() -> new IllegalArgumentException("Tipo de documento '" + tdId + "' no válido"));
+
+        CategoryClient categoriaParticular = categoryClientRepository.findById("PART")
+                .orElseThrow(() -> new IllegalStateException("Categoría de cliente PART no encontrada"));
+
+        // ── 4. Crear usuario (tabla usuarios) ────────────────────────────────
         User newUser = new User();
-        newUser.setUsername(email); // El email es el username
-        newUser.setEmail(email); // También guardamos en el campo email
-        newUser.setPassword(passwordEncoder.encode(password)); // Cifrar la contraseña
+        newUser.setUsername(email);
+        newUser.setEmail(email);
+        newUser.setPassword(passwordEncoder.encode(password));
         newUser.setFirstName(firstName);
         newUser.setLastName(lastName);
         newUser.setTelefono(telefono);
         newUser.setRole(clientRole);
+        userRepository.save(newUser);
 
-        return userRepository.save(newUser);
+        // ── 5. Crear cliente (tabla clientes) ────────────────────────────────
+        Cliente nuevoCliente = new Cliente(
+                documento, null, categoriaParticular, tipoDoc,
+                firstName, lastName, telefono, direccion, true);
+        nuevoCliente.setEmail(email);
+        clienteRepository.save(nuevoCliente);
+
+        return newUser;
     }
 }
