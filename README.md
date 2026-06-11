@@ -102,12 +102,12 @@ docker run -p 8080:8080 \
   inventory-backend
 ```
 
-### Backend + PostgreSQL con docker-compose
+### Backend + PostgreSQL con Docker Compose
 
 ```bash
 cp .env.example .env
 # Editar .env
-docker-compose up -d
+docker compose up -d
 ```
 
 ---
@@ -185,7 +185,8 @@ src/main/resources/
 2. Cambiar `DDL_AUTO=validate`.
 3. Generar secreto JWT seguro: `openssl rand -base64 64`.
 4. Asegurarse de que `APP_CORS_ORIGINS` apunte al dominio del frontend.
-5. Activar HTTPS mediante un proxy inverso (Nginx, Traefik, etc.).
+5. Verificar `http://localhost:8080/actuator/health/readiness`.
+6. Activar HTTPS mediante un proxy inverso (Nginx, Traefik, etc.).
 
 ---
 

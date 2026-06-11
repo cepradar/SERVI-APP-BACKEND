@@ -33,7 +33,26 @@
 
 ## 🚀 Pasos para Ejecutar en Debian 13
 
-### 1. Preparar el entorno
+### 1. Instalar Docker Engine y Compose Plugin
+```bash
+sudo apt update
+sudo apt install -y ca-certificates curl gnupg
+sudo install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/debian/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+sudo chmod a+r /etc/apt/keyrings/docker.gpg
+echo \
+  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian \
+  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+sudo apt update
+sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+sudo systemctl enable --now docker
+sudo usermod -aG docker $USER
+```
+
+> Cierra y vuelve a abrir sesión para que el grupo `docker` aplique a tu usuario.
+
+### 2. Preparar el entorno
 ```bash
 # Clonar o copiar el proyecto
 cd ~/inventory-backend
@@ -45,7 +64,7 @@ cp .env.example .env
 nano .env
 ```
 
-### 2. Configurar variables en `.env`
+### 3. Configurar variables en `.env`
 ```env
 # REQUERIDO: Cambiar estos valores
 POSTGRES_PASSWORD=password_muy_seguro_aqui_12345
@@ -54,19 +73,19 @@ APP_CORS_ORIGINS=https://tu-dominio.com,https://www.tu-dominio.com
 DDL_AUTO=validate
 ```
 
-### 3. Iniciar los servicios
+### 4. Iniciar los servicios
 ```bash
 # Build y start
-docker-compose up -d
+docker compose up -d
 
 # Ver logs en tiempo real
-docker-compose logs -f backend
+docker compose logs -f backend
 
 # Verificar que PostgreSQL está listo
-docker-compose logs db | grep "ready to accept"
+docker compose logs db | grep "ready to accept"
 ```
 
-### 4. Verificar que está funcionando
+### 5. Verificar que está funcionando
 ```bash
 # Health check
 curl http://localhost:8080/actuator/health
@@ -75,7 +94,7 @@ curl http://localhost:8080/actuator/health
 curl http://localhost:8080/actuator/health/readiness
 
 # Ver estado de contenedores
-docker-compose ps
+docker compose ps
 ```
 
 ---
@@ -119,14 +138,14 @@ docker-compose ps
 ### Backend no inicia
 ```bash
 # Ver logs detallados
-docker-compose logs backend
+docker compose logs backend
 
 # Reiniciar
-docker-compose restart backend
+docker compose restart backend
 
 # Reset completo
-docker-compose down -v
-docker-compose up -d
+docker compose down -v
+docker compose up -d
 ```
 
 ### PostgreSQL no responde
@@ -135,7 +154,7 @@ docker-compose up -d
 docker exec -it inventory-db psql -U postgres -d SERVI
 
 # Ver estado
-docker-compose logs db
+docker compose logs db
 ```
 
 ### Puerto 8080 ya en uso
@@ -144,7 +163,7 @@ docker-compose logs db
 SERVER_PORT=8081
 
 # Reiniciar
-docker-compose restart backend
+docker compose restart backend
 ```
 
 ---

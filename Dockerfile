@@ -32,8 +32,8 @@ USER appuser
 
 EXPOSE 8080
 
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-  CMD ps aux | grep app.jar | grep -v grep || exit 1
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+  CMD curl -fsS http://localhost:8080/actuator/health/readiness || exit 1
 
 ENTRYPOINT ["java", \
   "-Xmx512m", \
