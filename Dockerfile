@@ -16,6 +16,9 @@ RUN ./mvnw package -DskipTests -q
 FROM eclipse-temurin:17-jre-alpine AS runtime
 WORKDIR /app
 
+# Instalar curl para healthcheck
+RUN apk add --no-cache curl
+
 # Crear usuario no-root por seguridad
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
