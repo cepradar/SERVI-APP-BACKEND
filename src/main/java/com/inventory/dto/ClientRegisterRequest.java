@@ -19,7 +19,7 @@ public class ClientRegisterRequest {
     private String firstName;     // Requerido — nombre
     private String lastName;      // Requerido — apellido
     private String telefono;      // Opcional
-    private String documento;     // Requerido — número de cédula / NIT (PK en clientes)
+    private String nit;          // Requerido — número de cédula / NIT (PK en clientes)
     private String tipoDocumento; // Opcional — CC | NIT | CE | PASAPORTE | TI (default CC)
     private String direccion;     // Opcional
 }

@@ -1,207 +1,78 @@
 package com.inventory.dto;
 
 import com.inventory.model.Auditoria;
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 public class AuditoriaDto {
-    
+
     private Long id;
-    private String tipoEventoId;
-    private String tipoEventoNombre;
-    private String tipoEventoCategoria; // 🔔 Nueva propiedad
-    private String productId;
-    private String productName;
-    private Integer cantidadInicial;
-    private Integer cantidadFinal;
-    private BigDecimal precioInicial;
-    private BigDecimal precioFinal;
+    private String eventoId;
+    private String eventoNombre;
+    private String eventoCategoria;
     private String descripcion;
     private String usuarioUsername;
     private String usuarioNombreCompleto;
     private LocalDateTime fecha;
-    private String referencia;
+    private String estadoInicial;
+    private String estadoFinal;
+    private String productoId;
+    private String productoNombre;
+    private String ventaId;
+    private String ordenServicioId;
 
-    // Constructor vacío
-    public AuditoriaDto() {
-    }
+    public AuditoriaDto() {}
 
-    // Constructor completo
-    public AuditoriaDto(Long id, String tipoEventoId, String tipoEventoNombre, String productId,
-                        String productName, Integer cantidadInicial, Integer cantidadFinal,
-                        BigDecimal precioInicial, BigDecimal precioFinal,
-                        String descripcion, String usuarioUsername,
-                        String usuarioNombreCompleto, LocalDateTime fecha, String referencia) {
-        this.id = id;
-        this.tipoEventoId = tipoEventoId;
-        this.tipoEventoNombre = tipoEventoNombre;
-        this.productId = productId;
-        this.productName = productName;
-        this.cantidadInicial = cantidadInicial;
-        this.cantidadFinal = cantidadFinal;
-        this.precioInicial = precioInicial;
-        this.precioFinal = precioFinal;
-        this.descripcion = descripcion;
-        this.usuarioUsername = usuarioUsername;
-        this.usuarioNombreCompleto = usuarioNombreCompleto;
-        this.fecha = fecha;
-        this.referencia = referencia;
-    }
-
-    // Constructor desde entidad
-    public AuditoriaDto(Auditoria auditoria) {
-        this.id = auditoria.getId();
-        
-        // Manejo seguro de TipoEvento
-        if (auditoria.getTipoEvento() != null) {
-            this.tipoEventoId = auditoria.getTipoEvento().getId();
-            this.tipoEventoNombre = auditoria.getTipoEvento().getNombre();
-            
-            // Manejo seguro de Categoria
-            if (auditoria.getTipoEvento().getCategoria() != null) {
-                this.tipoEventoCategoria = auditoria.getTipoEvento().getCategoria().getNombre();
-            } else {
-                this.tipoEventoCategoria = "SIN_CATEGORIA";
-            }
+    public AuditoriaDto(Auditoria a) {
+        this.id            = a.getId();
+        this.descripcion   = a.getDescripcion();
+        this.fecha         = a.getFecha();
+        this.estadoInicial = a.getEstadoInicial();
+        this.estadoFinal   = a.getEstadoFinal();
+        if (a.getEvento() != null) {
+            this.eventoId       = a.getEvento().getId();
+            this.eventoNombre   = a.getEvento().getNombre();
+            this.eventoCategoria = a.getEvento().getCategoria() != null
+                    ? a.getEvento().getCategoria().getNombre() : "SIN_CATEGORIA";
         } else {
-            this.tipoEventoId = "DESCONOCIDO";
-            this.tipoEventoNombre = "Desconocido";
-            this.tipoEventoCategoria = "SIN_CATEGORIA";
+            this.eventoId = "DESCONOCIDO"; this.eventoNombre = "Desconocido"; this.eventoCategoria = "SIN_CATEGORIA";
         }
-        
-        this.productId = auditoria.getProductId();
-        this.productName = auditoria.getProductName();
-        this.cantidadInicial = auditoria.getCantidadInicial();
-        this.cantidadFinal = auditoria.getCantidadFinal();
-        this.precioInicial = auditoria.getPrecioInicial();
-        this.precioFinal = auditoria.getPrecioFinal();
-        this.descripcion = auditoria.getDescripcion();
-        this.usuarioUsername = auditoria.getUsuario() != null ? auditoria.getUsuario().getUsername() : "Desconocido";
-        this.usuarioNombreCompleto = auditoria.getUsuario() != null 
-                ? auditoria.getUsuario().getFirstName() + " " + auditoria.getUsuario().getLastName()
-                : "Desconocido";
-        this.fecha = auditoria.getFecha();
-        this.referencia = auditoria.getReferencia();
+        if (a.getUsuario() != null) {
+            this.usuarioUsername = a.getUsuario().getUsername();
+            this.usuarioNombreCompleto =
+                    (a.getUsuario().getFirstName() != null ? a.getUsuario().getFirstName() : "")
+                    + " " + (a.getUsuario().getLastName() != null ? a.getUsuario().getLastName() : "");
+        }
+        if (a.getProducto() != null) { this.productoId = a.getProducto().getId(); this.productoNombre = a.getProducto().getName(); }
+        if (a.getVenta() != null) this.ventaId = a.getVenta().getId();
+        if (a.getOrdenDeServicio() != null) this.ordenServicioId = a.getOrdenDeServicio().getId();
     }
 
-    // Getters y Setters
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public String getTipoEventoId() {
-        return tipoEventoId;
-    }
-
-    public void setTipoEventoId(String tipoEventoId) {
-        this.tipoEventoId = tipoEventoId;
-    }
-
-    public String getTipoEventoNombre() {
-        return tipoEventoNombre;
-    }
-
-    public void setTipoEventoNombre(String tipoEventoNombre) {
-        this.tipoEventoNombre = tipoEventoNombre;
-    }
-
-    public String getTipoEventoCategoria() {
-        return tipoEventoCategoria;
-    }
-
-    public void setTipoEventoCategoria(String tipoEventoCategoria) {
-        this.tipoEventoCategoria = tipoEventoCategoria;
-    }
-
-    public String getProductId() {
-        return productId;
-    }
-
-    public void setProductId(String productId) {
-        this.productId = productId;
-    }
-
-    public String getProductName() {
-        return productName;
-    }
-
-    public void setProductName(String productName) {
-        this.productName = productName;
-    }
-
-    public Integer getCantidadInicial() {
-        return cantidadInicial;
-    }
-
-    public void setCantidadInicial(Integer cantidadInicial) {
-        this.cantidadInicial = cantidadInicial;
-    }
-
-    public Integer getCantidadFinal() {
-        return cantidadFinal;
-    }
-
-    public void setCantidadFinal(Integer cantidadFinal) {
-        this.cantidadFinal = cantidadFinal;
-    }
-
-    public BigDecimal getPrecioInicial() {
-        return precioInicial;
-    }
-
-    public void setPrecioInicial(BigDecimal precioInicial) {
-        this.precioInicial = precioInicial;
-    }
-
-    public BigDecimal getPrecioFinal() {
-        return precioFinal;
-    }
-
-    public void setPrecioFinal(BigDecimal precioFinal) {
-        this.precioFinal = precioFinal;
-    }
-
-    public String getDescripcion() {
-        return descripcion;
-    }
-
-    public void setDescripcion(String descripcion) {
-        this.descripcion = descripcion;
-    }
-
-    public String getUsuarioUsername() {
-        return usuarioUsername;
-    }
-
-    public void setUsuarioUsername(String usuarioUsername) {
-        this.usuarioUsername = usuarioUsername;
-    }
-
-    public String getUsuarioNombreCompleto() {
-        return usuarioNombreCompleto;
-    }
-
-    public void setUsuarioNombreCompleto(String usuarioNombreCompleto) {
-        this.usuarioNombreCompleto = usuarioNombreCompleto;
-    }
-
-    public LocalDateTime getFecha() {
-        return fecha;
-    }
-
-    public void setFecha(LocalDateTime fecha) {
-        this.fecha = fecha;
-    }
-
-    public String getReferencia() {
-        return referencia;
-    }
-
-    public void setReferencia(String referencia) {
-        this.referencia = referencia;
-    }
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    public String getEventoId() { return eventoId; }
+    public void setEventoId(String eventoId) { this.eventoId = eventoId; }
+    public String getEventoNombre() { return eventoNombre; }
+    public void setEventoNombre(String eventoNombre) { this.eventoNombre = eventoNombre; }
+    public String getEventoCategoria() { return eventoCategoria; }
+    public void setEventoCategoria(String eventoCategoria) { this.eventoCategoria = eventoCategoria; }
+    public String getDescripcion() { return descripcion; }
+    public void setDescripcion(String descripcion) { this.descripcion = descripcion; }
+    public String getUsuarioUsername() { return usuarioUsername; }
+    public void setUsuarioUsername(String u) { this.usuarioUsername = u; }
+    public String getUsuarioNombreCompleto() { return usuarioNombreCompleto; }
+    public void setUsuarioNombreCompleto(String v) { this.usuarioNombreCompleto = v; }
+    public LocalDateTime getFecha() { return fecha; }
+    public void setFecha(LocalDateTime fecha) { this.fecha = fecha; }
+    public String getEstadoInicial() { return estadoInicial; }
+    public void setEstadoInicial(String estadoInicial) { this.estadoInicial = estadoInicial; }
+    public String getEstadoFinal() { return estadoFinal; }
+    public void setEstadoFinal(String estadoFinal) { this.estadoFinal = estadoFinal; }
+    public String getProductoId() { return productoId; }
+    public void setProductoId(String productoId) { this.productoId = productoId; }
+    public String getProductoNombre() { return productoNombre; }
+    public void setProductoNombre(String productoNombre) { this.productoNombre = productoNombre; }
+    public String getVentaId() { return ventaId; }
+    public void setVentaId(String ventaId) { this.ventaId = ventaId; }
+    public String getOrdenServicioId() { return ordenServicioId; }
+    public void setOrdenServicioId(String ordenServicioId) { this.ordenServicioId = ordenServicioId; }
 }

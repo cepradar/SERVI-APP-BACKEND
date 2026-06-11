@@ -2,13 +2,12 @@ package com.inventory.dto;
 
 import com.inventory.model.User;
 
-import ch.qos.logback.core.subst.Token;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-//genera getters and setter
+import java.time.LocalDateTime;
+
 @Data
-//genera constructor sin argumentos
 @NoArgsConstructor
 public class UserDto {
 
@@ -21,11 +20,15 @@ public class UserDto {
     private String role;
     private String roleColor;
     private byte[] profilePicture;
-    private Token token;
+    private String cedula;
+    private boolean activo;
+    private boolean cuentaBloqueada;
+    private LocalDateTime fechaCreacion;
+    private LocalDateTime ultimoLogin;
 
     // Constructor
     public UserDto(User usuario) {
-        this.id = usuario.getUsername(); // Usar username como id
+        this.id = usuario.getUsername();
         this.username = usuario.getUsername();
         this.role = usuario.getRole() != null ? usuario.getRole().getName() : "USER";
         this.roleColor = usuario.getRole() != null && usuario.getRole().getColor() != null ? usuario.getRole().getColor() : "#2563eb";
@@ -34,14 +37,16 @@ public class UserDto {
         this.lastName = usuario.getLastName();
         this.email = usuario.getEmail();
         this.telefono = usuario.getTelefono();
+        this.cedula = usuario.getCedula();
+        this.activo = usuario.isActivo();
+        this.cuentaBloqueada = usuario.isCuentaBloqueada();
+        this.fechaCreacion = usuario.getFechaCreacion();
+        this.ultimoLogin = usuario.getUltimoLogin();
     }
 
-
-    // Método toString (opcional)
     @Override
     public String toString() {
-        return "UsuarioDto{username=" + username + "', roleName='" + role + "', profilePicture='" + profilePicture
-                + "'}";
+        return "UsuarioDto{username=" + username + "', roleName='" + role + "', profilePicture='" + profilePicture + "'}";
     }
 
     public static User toUsuarios(UserDto usuariosDto) {
@@ -52,8 +57,7 @@ public class UserDto {
         usuarios.setLastName(usuariosDto.getLastName());
         usuarios.setEmail(usuariosDto.getEmail());
         usuarios.setTelefono(usuariosDto.getTelefono());
-
+        if (usuariosDto.getCedula() != null) usuarios.setCedula(usuariosDto.getCedula());
         return usuarios;
     }
-
 }

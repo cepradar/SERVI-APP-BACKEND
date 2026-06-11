@@ -1,20 +1,23 @@
 package com.inventory.service;
 
 import com.inventory.dto.OrdenDeServicioDto;
-import com.inventory.dto.OrdenServicioProductoDto;
+import com.inventory.model.CategoriaEvento;
 import com.inventory.model.Cliente;
 import com.inventory.model.ClienteElectrodomestico;
-import com.inventory.model.Product;
 import com.inventory.model.OrdenDeServicio;
-import com.inventory.model.OrdenServicioProducto;
-import com.inventory.model.TipoEvento;
+import com.inventory.model.Sede;
+import com.inventory.model.Evento;
 import com.inventory.model.User;
 import com.inventory.repository.ClienteElectrodomesticoRepository;
 import com.inventory.repository.ClienteRepository;
 import com.inventory.repository.ProductRepository;
 import com.inventory.repository.OrdenDeServicioRepository;
-import com.inventory.repository.TipoEventoRepository;
+import com.inventory.repository.SedeRepository;
+import com.inventory.repository.EventoRepository;
+import com.inventory.repository.UsuarioSedeRepository;
 import com.inventory.repository.UserRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,12 +30,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
 @Transactional
 public class OrdenDeServicioService {
+
+    private static final Logger log = LoggerFactory.getLogger(OrdenDeServicioService.class);
 
     private static final Long CATEGORIA_ORDEN_SERVICIO_ID = 2L;
 
@@ -52,11 +56,27 @@ public class OrdenDeServicioService {
     private ProductRepository productRepository;
 
     @Autowired
-    private TipoEventoRepository tipoEventoRepository;
+    private EventoRepository tipoEventoRepository;
 
     @Autowired
     private AuditoriaService auditoriaService;
 
+    @Autowired
+    private SedeRepository sedeRepository;
+
+    @Autowired
+    private UsuarioSedeRepository usuarioSedeRepository;
+
+    /**
+     * Registra una nueva orden de servicio con ID generado por sede.
+     *
+     * Flujo thread-safe:
+     * 1. Valida que el usuario tenga acceso a la sede indicada.
+     * 2. Obtiene lock pesimista sobre la sede para leer/incrementar el consecutivo.
+     * 3. Genera el ID de orden: O-{CODIGO_SEDE}-{CONSECUTIVO_6_DIGITOS}
+     * 4. Incrementa y persiste el consecutivo dentro de la misma transacción.
+     * 5. Crea y guarda la orden.
+     */
     public OrdenDeServicioDto registrarServicio(OrdenDeServicioDto dto, String usernameLogeado) {
         if (dto.getClienteId() == null || dto.getClienteTipoDocumentoId() == null) {
             throw new RuntimeException("Cliente y tipo documento son obligatorios");
@@ -65,27 +85,58 @@ public class OrdenDeServicioService {
             throw new RuntimeException("Debe seleccionar un electrodoméstico");
         }
 
+        // ── 1. Validar acceso del usuario a la sede ──────────────────────────
+        String codigoSede = Objects.requireNonNull(dto.getCodigoSede(),
+            "codigoSede es obligatorio para registrar una orden").trim().toUpperCase();
+
+        log.info("Registrando orden de servicio — usuario: {}, sede: {}", usernameLogeado, codigoSede);
+
+        boolean tieneAcceso = usuarioSedeRepository.existsByUsuarioUsernameAndCodigoSede(
+            usernameLogeado, codigoSede);
+        if (!tieneAcceso) {
+            log.warn("Acceso denegado: usuario '{}' no tiene acceso a sede '{}'", usernameLogeado, codigoSede);
+            throw new org.springframework.security.access.AccessDeniedException(
+                "No tienes acceso para registrar órdenes en la sede: " + codigoSede);
+        }
+
+        // ── 2. Resolver entidades básicas ────────────────────────────────────
         User usuario = userRepository.findById(Objects.requireNonNull(usernameLogeado, "usernameLogeado"))
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado: " + usernameLogeado));
 
-        Cliente cliente = clienteRepository.findByIdAndTipoDocumentoId(
+        Cliente cliente = clienteRepository.findByNitAndTipoDocumentoId(
                 Objects.requireNonNull(dto.getClienteId(), "clienteId"),
-                Objects.requireNonNull(dto.getClienteTipoDocumentoId(), "clienteTipoDocumentoId")
-            )
+                Objects.requireNonNull(dto.getClienteTipoDocumentoId(), "clienteTipoDocumentoId"))
             .orElseThrow(() -> new RuntimeException("Cliente no encontrado: " + dto.getClienteId()));
 
         ClienteElectrodomestico ce = clienteElectrodomesticoRepository.findById(
-                Objects.requireNonNull(dto.getElectrodomesticoId(), "electrodomesticoId")
-            )
-                .orElseThrow(() -> new RuntimeException("ClienteElectrodomestico no encontrado: " + dto.getElectrodomesticoId()));
+                Objects.requireNonNull(dto.getElectrodomesticoId(), "electrodomesticoId"))
+                .orElseThrow(() -> new RuntimeException(
+                    "ClienteElectrodomestico no encontrado: " + dto.getElectrodomesticoId()));
 
         if (!ce.getCliente().getId().equals(cliente.getId()) ||
             !ce.getCliente().getTipoDocumentoId().equals(cliente.getTipoDocumentoId())) {
             throw new RuntimeException("El electrodoméstico no pertenece al cliente indicado");
         }
 
+        // ── 3. Obtener sede con LOCK pesimista e incrementar consecutivo ─────
+        Sede sede = sedeRepository.findByCodigoSedeParaActualizacion(codigoSede)
+            .orElseThrow(() -> new RuntimeException("Sede no encontrada: " + codigoSede));
+
+        if (!sede.isActivo()) {
+            throw new IllegalStateException("La sede '" + codigoSede + "' está inactiva");
+        }
+
+        int consecutivo = sede.getConsecutivoOrdenes();
+        String idOrden = String.format("O-%s-%06d", codigoSede, consecutivo);
+        sede.setConsecutivoOrdenes(consecutivo + 1);
+        sedeRepository.save(sede);
+
+        log.info("Consecutivo orden asignado: {} (próximo: {})", idOrden, consecutivo + 1);
+
+        // ── 4. Construir la orden ────────────────────────────────────────────
         OrdenDeServicio servicio = new OrdenDeServicio();
-        servicio.setId(generarConsecutivo());
+        servicio.setId(idOrden);
+        servicio.setSede(sede);
         servicio.setCliente(cliente);
         servicio.setClienteElectrodomestico(ce);
         servicio.setTipoServicio(dto.getTipoServicio());
@@ -98,8 +149,8 @@ public class OrdenDeServicioService {
         servicio.setTotalCosto(servicio.getCostoServicio().add(servicio.getCostoRepuestos()));
         servicio.setGarantiaServicio(dto.getGarantiaServicio() != null ? dto.getGarantiaServicio() : 30);
         // Regla 1: toda orden nueva se crea con estado ORDEN_SERVICIO_CREADA / SOC
-        TipoEvento eventoCreacion = resolverTipoEventoEstado("RECIBIDO");
-        servicio.setEstado(eventoCreacion.getId()); // almacena "SOC"
+        Evento eventoCreacion = resolverTipoEventoEstado("RECIBIDO");
+        servicio.setEstado(eventoCreacion.getCategoria()); // asigna la CategoriaEvento del evento
         servicio.setUsuario(usuario);
         servicio.setObservaciones(dto.getObservaciones());
 
@@ -168,7 +219,7 @@ public class OrdenDeServicioService {
             servicio.setObservaciones(dto.getObservaciones());
         }
         if (dto.getEstado() != null) {
-            servicio.setEstado(resolverTipoEventoEstado(dto.getEstado()).getId());
+            servicio.setEstado(resolverTipoEventoEstado(dto.getEstado()).getCategoria());
         }
         if (dto.getTecnicoAsignadoUsername() != null) {
             String tecnicoUsername = dto.getTecnicoAsignadoUsername().trim();
@@ -223,11 +274,11 @@ public class OrdenDeServicioService {
         OrdenDeServicio servicio = servicioRepository.findById(Objects.requireNonNull(id, "id"))
                 .orElseThrow(() -> new RuntimeException("Servicio de reparación no encontrado: " + id));
 
-        String estadoAnterior = estadoVisualDesdeCodigo(servicio.getEstado());
+        String estadoAnterior = servicio.getEstado() != null ? servicio.getEstado().getNombre() : "-";
         String estadoNormalizado = normalizarEstado(nuevoEstado);
-        TipoEvento tipoEvento = resolverTipoEventoEstado(estadoNormalizado);
+        Evento tipoEvento = resolverTipoEventoEstado(estadoNormalizado);
 
-        servicio.setEstado(tipoEvento.getId());
+        servicio.setEstado(tipoEvento.getCategoria());
 
         if (("LISTO".equalsIgnoreCase(estadoNormalizado) || "REPARADO".equalsIgnoreCase(estadoNormalizado))
                 && servicio.getGarantiaServicio() != null) {
@@ -294,12 +345,12 @@ public class OrdenDeServicioService {
                         Objects.requireNonNull(id, "id"))
                 .orElseThrow(() -> new RuntimeException("Orden no encontrada: " + id));
 
-        // Resolver dinámicamente el código de ORDEN_SERVICIO_CREADA en la BD
-        String codigoCreada = resolverTipoEventoEstado("RECIBIDO").getId();
-        if (!codigoCreada.equals(servicio.getEstado())) {
+        // Resolver dinámicamente el estado inicial (RECIBIDO) en la BD
+        CategoriaEvento categoriaEsperada = resolverTipoEventoEstado("RECIBIDO").getCategoria();
+        if (servicio.getEstado() == null || !categoriaEsperada.getId().equals(servicio.getEstado().getId())) {
             throw new RuntimeException(
                     "Solo se pueden asignar órdenes en estado ORDEN_SERVICIO_CREADA. " +
-                    "Estado actual de la orden " + id + ": " + estadoVisualDesdeCodigo(servicio.getEstado()));
+                    "Estado actual de la orden " + id + ": " + (servicio.getEstado() != null ? servicio.getEstado().getNombre() : "-"));
         }
 
         if (servicio.getTecnicoAsignado() != null) {
@@ -312,10 +363,10 @@ public class OrdenDeServicioService {
                         Objects.requireNonNull(tecnicoUsername, "tecnicoUsername"))
                 .orElseThrow(() -> new RuntimeException("Técnico no encontrado: " + tecnicoUsername));
 
-        TipoEvento eventoAsignada = resolverTipoEventoEstado("ASIGNADO");
+        Evento eventoAsignada = resolverTipoEventoEstado("ASIGNADO");
 
         servicio.setTecnicoAsignado(tecnico);
-        servicio.setEstado(eventoAsignada.getId());
+        servicio.setEstado(eventoAsignada.getCategoria());
         servicio.setFechaAsignacion(LocalDateTime.now());
 
         OrdenDeServicio actualizado = servicioRepository.save(servicio);
@@ -365,11 +416,11 @@ public class OrdenDeServicioService {
         }
         if (cierreDto.getObservaciones() != null) servicio.setObservaciones(cierreDto.getObservaciones());
 
-        String estadoAnterior = estadoVisualDesdeCodigo(servicio.getEstado());
+        String estadoAnterior = servicio.getEstado() != null ? servicio.getEstado().getNombre() : "-";
         String estadoNormalizado = normalizarEstado(nuevoEstado);
-        TipoEvento tipoEvento = resolverTipoEventoEstado(estadoNormalizado);
+        Evento tipoEvento = resolverTipoEventoEstado(estadoNormalizado);
 
-        servicio.setEstado(tipoEvento.getId());
+        servicio.setEstado(tipoEvento.getCategoria());
 
         if (("LISTO".equalsIgnoreCase(estadoNormalizado) || "REPARADO".equalsIgnoreCase(estadoNormalizado))
                 && servicio.getGarantiaServicio() != null) {
@@ -403,7 +454,12 @@ public class OrdenDeServicioService {
     private OrdenDeServicioDto convertirADto(OrdenDeServicio servicio, Map<String, String> mapaEstados) {
         OrdenDeServicioDto dto = new OrdenDeServicioDto();
         dto.setId(servicio.getId());
-        dto.setClienteId(servicio.getCliente() != null ? servicio.getCliente().getId() : null);
+        // ── Campos de sede ────────────────────────────────────────────────────
+        if (servicio.getSede() != null) {
+            dto.setCodigoSede(servicio.getSede().getCodigoSede());
+            dto.setNombreSede(servicio.getSede().getNombre());
+        }
+        dto.setClienteId(servicio.getCliente() != null ? String.valueOf(servicio.getCliente().getId()) : null);
         dto.setClienteTipoDocumentoId(servicio.getCliente() != null ? servicio.getCliente().getTipoDocumentoId() : null);
         dto.setClienteNombre(servicio.getCliente() != null ? servicio.getCliente().getNombre() : null);
         dto.setClienteApellido(servicio.getCliente() != null ? servicio.getCliente().getApellido() : null);
@@ -422,7 +478,7 @@ public class OrdenDeServicioService {
         dto.setCostoRepuestos(servicio.getCostoRepuestos());
         dto.setTotalCosto(servicio.getTotalCosto());
         // Resolver tipo_evento.nombre: usar mapa precargado si está disponible
-        String codigoEstado = servicio.getEstado();
+        String codigoEstado = servicio.getEstado() != null ? servicio.getEstado().getNombre() : null;
         String nombreEstado = (mapaEstados != null && codigoEstado != null && mapaEstados.containsKey(codigoEstado))
                 ? mapaEstados.get(codigoEstado)
                 : estadoVisualDesdeCodigo(codigoEstado);
@@ -438,6 +494,9 @@ public class OrdenDeServicioService {
         dto.setFechaAsignacion(servicio.getFechaAsignacion());
         dto.setCodigoEstado(codigoEstado); // código interno: SOC, SOA, etc.
         dto.setObservaciones(servicio.getObservaciones());
+        dto.setActivo(servicio.isActivo());
+        dto.setFechaReparado(servicio.getFechaReparado());
+        dto.setFechaEntrega(servicio.getFechaEntrega());
         return dto;
     }
 
@@ -525,7 +584,7 @@ public class OrdenDeServicioService {
         }
     }
 
-    private TipoEvento resolverTipoEventoEstado(String estadoEntrada) {
+    private Evento resolverTipoEventoEstado(String estadoEntrada) {
         String estadoNormalizado = normalizarEstado(estadoEntrada);
         String nombreEvento = nombreEventoPorEstado(estadoNormalizado);
         return tipoEventoRepository.findByNombreAndCategoriaId(nombreEvento, CATEGORIA_ORDEN_SERVICIO_ID)
@@ -544,12 +603,12 @@ public class OrdenDeServicioService {
             return "-";
         }
         // Búsqueda principal: por TipoEvento.id
-        TipoEvento tipoEvento = tipoEventoRepository.findById(codigoEstado).orElse(null);
+        Evento tipoEvento = tipoEventoRepository.findById(codigoEstado).orElse(null);
         if (tipoEvento != null && tipoEvento.getNombre() != null) {
             return tipoEvento.getNombre();
         }
         // Fallback: el campo podría contener el nombre directamente (datos migrados / legados)
-        TipoEvento porNombre = tipoEventoRepository.findByNombre(codigoEstado);
+        Evento porNombre = tipoEventoRepository.findByNombre(codigoEstado);
         if (porNombre != null) {
             return porNombre.getNombre();
         }

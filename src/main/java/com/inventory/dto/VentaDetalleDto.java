@@ -22,6 +22,10 @@ public class VentaDetalleDto {
     // ── Campos comunes ───────────────────────────────────────────────────────
     private Integer cantidad;
     private BigDecimal precioUnitario;
+    /** Descuento aplicado a esta línea (en moneda). */
+    private BigDecimal descuento;
+    /** Impuesto (IVA) aplicado a esta línea (en moneda). */
+    private BigDecimal impuesto;
     private BigDecimal subtotal;
 
     public VentaDetalleDto() {}
@@ -74,6 +78,12 @@ public class VentaDetalleDto {
 
     public BigDecimal getPrecioUnitario() { return precioUnitario; }
     public void setPrecioUnitario(BigDecimal precioUnitario) { this.precioUnitario = precioUnitario; }
+
+    public BigDecimal getDescuento() { return descuento; }
+    public void setDescuento(BigDecimal descuento) { this.descuento = descuento; }
+
+    public BigDecimal getImpuesto() { return impuesto; }
+    public void setImpuesto(BigDecimal impuesto) { this.impuesto = impuesto; }
 
     public BigDecimal getSubtotal() { return subtotal; }
     public void setSubtotal(BigDecimal subtotal) { this.subtotal = subtotal; }

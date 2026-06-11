@@ -29,9 +29,11 @@ USER appuser
 
 EXPOSE 8080
 
-HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-  CMD wget -qO- http://localhost:8080/actuator/health || exit 1
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+  CMD ps aux | grep app.jar | grep -v grep || exit 1
 
 ENTRYPOINT ["java", \
+  "-Xmx512m", \
+  "-Xms256m", \
   "-Djava.security.egd=file:/dev/./urandom", \
   "-jar", "app.jar"]

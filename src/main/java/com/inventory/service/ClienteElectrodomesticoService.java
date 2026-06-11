@@ -36,7 +36,7 @@ public class ClienteElectrodomesticoService {
     public ClienteElectrodomesticoDto registrar(ClienteElectrodomesticoDto dto, String username) {
         User usuario = userRepository.findById(Objects.requireNonNull(username, "username"))
             .orElseThrow(() -> new RuntimeException("Usuario no encontrado: " + username));
-        Cliente cliente = clienteRepository.findByIdAndTipoDocumentoId(
+        Cliente cliente = clienteRepository.findByNitAndTipoDocumentoId(
                 Objects.requireNonNull(dto.getClienteId(), "clienteId"),
                 Objects.requireNonNull(dto.getClienteTipoDocumentoId(), "clienteTipoDocumentoId")
             )
@@ -49,7 +49,7 @@ public class ClienteElectrodomesticoService {
 
         // Validar que la combinación serial+marca+cliente sea única
         if (dto.getMarcaElectrodomesticoId() != null && dto.getMarcaElectrodomesticoId() > 0) {
-            boolean existe = repo.existsByNumeroSerieAndMarcaElectrodomesticoIdAndClienteIdAndClienteTipoDocumentoId(
+            boolean existe = repo.existsByNumeroSerieAndMarcaElectrodomesticoIdAndClienteNitAndClienteTipoDocumentoId(
                 dto.getNumeroSerie(),
                 dto.getMarcaElectrodomesticoId(),
                 dto.getClienteId(),
@@ -74,7 +74,6 @@ public class ClienteElectrodomesticoService {
         
         ce.setElectrodomesticoModelo(dto.getElectrodomesticoModelo());
         ce.setNumeroSerie(dto.getNumeroSerie());
-        ce.setUsuario(usuario);
 
         ClienteElectrodomestico saved = repo.save(ce);
         return convertirADto(saved);
@@ -110,11 +109,11 @@ public class ClienteElectrodomesticoService {
     }
 
     public List<ClienteElectrodomesticoDto> listarPorCliente(String clienteId) {
-        return repo.findByClienteId(clienteId).stream().map(this::convertirADto).collect(Collectors.toList());
+        return repo.findByClienteNit(clienteId).stream().map(this::convertirADto).collect(Collectors.toList());
     }
 
     public List<ClienteElectrodomesticoDto> listarPorCliente(String clienteId, String clienteTipoDocumentoId) {
-        return repo.findByClienteIdAndClienteTipoDocumentoId(clienteId, clienteTipoDocumentoId)
+        return repo.findByClienteNitAndClienteTipoDocumentoId(clienteId, clienteTipoDocumentoId)
                 .stream()
                 .map(this::convertirADto)
                 .collect(Collectors.toList());
@@ -133,7 +132,7 @@ public class ClienteElectrodomesticoService {
     private ClienteElectrodomesticoDto convertirADto(ClienteElectrodomestico ce) {
         ClienteElectrodomesticoDto dto = new ClienteElectrodomesticoDto();
         dto.setId(ce.getId());
-        dto.setClienteId(ce.getCliente().getId());
+        dto.setClienteId(ce.getCliente().getNit());
         dto.setClienteTipoDocumentoId(ce.getCliente().getTipoDocumentoId());
         dto.setClienteNombre(ce.getCliente().getNombre());
         dto.setClienteTelefono(ce.getCliente().getTelefono());
@@ -154,8 +153,6 @@ public class ClienteElectrodomesticoService {
         dto.setGarantiaVigente(ce.getGarantiaVigente());
         dto.setFechaVencimientoGarantia(ce.getFechaVencimientoGarantia());
         dto.setNotas(ce.getNotas());
-        dto.setUsuarioUsername(ce.getUsuario() != null ? ce.getUsuario().getUsername() : null);
-        dto.setUsuarioNombre(ce.getUsuario() != null ? ce.getUsuario().getFirstName() + " " + ce.getUsuario().getLastName() : null);
         return dto;
     }
 }

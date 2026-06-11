@@ -36,8 +36,6 @@ public class CompanyInitializer implements CommandLineRunner {
         company.setNit("900123456-7");
         company.setRazonSocial("SERVIPRADA");
         company.setDireccion("Calle 123 #45-67");
-        company.setCiudad("Santa Marta");
-        company.setDepartamento("Magdalena");
         company.setCodigoPostal("470001");
         company.setTelefono("+57 350 234 4185");
         company.setCorreo("contacto@washo.com.co");

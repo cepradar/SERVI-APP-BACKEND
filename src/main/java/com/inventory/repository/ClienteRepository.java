@@ -9,16 +9,18 @@ import org.springframework.stereotype.Repository;
 import org.springframework.lang.NonNull;
 
 import com.inventory.model.Cliente;
-import com.inventory.model.ClienteId;
 
 @Repository
-public interface ClienteRepository extends JpaRepository<Cliente, ClienteId> {
-    @NonNull
-    Optional<Cliente> findByIdAndTipoDocumentoId(@NonNull String id, @NonNull String tipoDocumentoId);
+public interface ClienteRepository extends JpaRepository<Cliente, Long> {
 
-    boolean existsByIdAndTipoDocumentoId(@NonNull String id, @NonNull String tipoDocumentoId);
+    @Query("SELECT c FROM Cliente c WHERE c.nit = ?1 AND c.tipoDocumento.id = ?2")
+    Optional<Cliente> findByNitAndTipoDocumentoId(@NonNull String nit, @NonNull String tipoDocumentoId);
 
-    @NonNull
-    @Query("SELECT c FROM Cliente c WHERE c.id = ?1")
-    List<Cliente> findByDocumento(@NonNull String documento);
+    @Query("SELECT CASE WHEN COUNT(c) > 0 THEN true ELSE false END FROM Cliente c WHERE c.nit = ?1 AND c.tipoDocumento.id = ?2")
+    boolean existsByNitAndTipoDocumentoId(@NonNull String nit, @NonNull String tipoDocumentoId);
+
+    @Query("SELECT c FROM Cliente c WHERE c.nit = ?1")
+    List<Cliente> findByNit(@NonNull String nit);
+
+    List<Cliente> findByActivoTrue();
 }

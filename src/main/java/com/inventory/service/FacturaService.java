@@ -41,7 +41,7 @@ public class FacturaService {
      * @param ventaId ID de la venta
      * @return bytes del PDF listo para enviar al cliente
      */
-    public byte[] generarFacturaPdf(Long ventaId) throws Exception {
+    public byte[] generarFacturaPdf(String ventaId) throws Exception {
         VentaDto venta = ventaService.obtenerVentaPorId(ventaId);
 
         ByteArrayOutputStream baos = new ByteArrayOutputStream();

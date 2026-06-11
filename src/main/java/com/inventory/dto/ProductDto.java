@@ -13,10 +13,17 @@ public class ProductDto {
     private String description;
     private double price;
     private int quantity;
-    private String categoryId; // Cambiado para recibir categoryId
+    private String categoryId;
     private Long categoriaElectrodomesticoId;
     private String categoriaElectrodomesticoNombre;
     private Boolean activo;
+    private String sku;
+    private java.math.BigDecimal costo;
+    private int stockMinimo;
+    private String unidadMedida;
+    private java.math.BigDecimal impuesto;
+    private java.time.LocalDateTime fechaCreacion;
+    private java.time.LocalDateTime fechaActualizacion;
 
     // Constructor con @JsonCreator para la deserialización
     @JsonCreator
@@ -29,7 +36,12 @@ public class ProductDto {
             @JsonProperty("categoryId") String categoryId,
             @JsonProperty("categoriaElectrodomesticoId") Long categoriaElectrodomesticoId,
             @JsonProperty("categoriaElectrodomesticoNombre") String categoriaElectrodomesticoNombre,
-            @JsonProperty("activo") Boolean activo) {
+            @JsonProperty("activo") Boolean activo,
+            @JsonProperty("sku") String sku,
+            @JsonProperty("costo") java.math.BigDecimal costo,
+            @JsonProperty("stockMinimo") int stockMinimo,
+            @JsonProperty("unidadMedida") String unidadMedida,
+            @JsonProperty("impuesto") java.math.BigDecimal impuesto) {
         this.id = id;
         this.name = name;
         this.description = description;
@@ -39,6 +51,11 @@ public class ProductDto {
         this.categoriaElectrodomesticoId = categoriaElectrodomesticoId;
         this.categoriaElectrodomesticoNombre = categoriaElectrodomesticoNombre;
         this.activo = activo;
+        this.sku = sku;
+        this.costo = costo;
+        this.stockMinimo = stockMinimo;
+        this.unidadMedida = unidadMedida;
+        this.impuesto = impuesto;
     }
 
     // Constructor que recibe un Product
@@ -56,6 +73,12 @@ public class ProductDto {
             this.categoriaElectrodomesticoNombre = product.getCategoriaElectrodomestico().getNombre();
         }
         this.activo = product.isActivo();
+        this.costo = product.getCosto();
+        this.stockMinimo = product.getStockMinimo();
+        this.unidadMedida = product.getUnidadMedida();
+        this.impuesto = product.getImpuesto();
+        this.fechaCreacion = product.getFechaCreacion();
+        this.fechaActualizacion = product.getFechaActualizacion();
     }
     
 
@@ -132,6 +155,24 @@ public class ProductDto {
         this.activo = activo;
     }
 
+    public String getSku() { return sku; }
+    public void setSku(String sku) { this.sku = sku; }
+
+    public java.math.BigDecimal getCosto() { return costo; }
+    public void setCosto(java.math.BigDecimal costo) { this.costo = costo; }
+
+    public int getStockMinimo() { return stockMinimo; }
+    public void setStockMinimo(int stockMinimo) { this.stockMinimo = stockMinimo; }
+
+    public String getUnidadMedida() { return unidadMedida; }
+    public void setUnidadMedida(String unidadMedida) { this.unidadMedida = unidadMedida; }
+
+    public java.math.BigDecimal getImpuesto() { return impuesto; }
+    public void setImpuesto(java.math.BigDecimal impuesto) { this.impuesto = impuesto; }
+
+    public java.time.LocalDateTime getFechaCreacion() { return fechaCreacion; }
+    public java.time.LocalDateTime getFechaActualizacion() { return fechaActualizacion; }
+
     // Método para mostrar cómo deseas que se vea el DTO como String
     @Override
     public String toString() {
@@ -145,7 +186,11 @@ public class ProductDto {
         producto.setPrice(productDto.getPrice());
         producto.setDescription(productDto.getDescription());
         producto.setQuantity(productDto.getQuantity());
-                producto.setActivo(productDto.getActivo() != null ? productDto.getActivo() : true);
+        producto.setActivo(productDto.getActivo() != null ? productDto.getActivo() : true);
+        if (productDto.getCosto() != null) producto.setCosto(productDto.getCosto());
+        producto.setStockMinimo(productDto.getStockMinimo());
+        if (productDto.getUnidadMedida() != null) producto.setUnidadMedida(productDto.getUnidadMedida());
+        if (productDto.getImpuesto() != null) producto.setImpuesto(productDto.getImpuesto());
                 // Crear Category con solo el ID
         CategoryProduct category = new CategoryProduct();
         category.setId(productDto.getCategoryId());

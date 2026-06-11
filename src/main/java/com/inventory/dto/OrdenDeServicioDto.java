@@ -3,10 +3,13 @@ package com.inventory.dto;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.List;
 
 public class OrdenDeServicioDto {
     private String id;
+    /** Código de la sede donde se registró la orden. Ej: BQ, MDE, BOG */
+    private String codigoSede;
+    /** Nombre de la sede para mostrar en UI. */
+    private String nombreSede;
     private String clienteId;
     private String clienteTipoDocumentoId;
     private String clienteNombre;
@@ -37,13 +40,19 @@ public class OrdenDeServicioDto {
     private LocalDateTime fechaAsignacion;
     private String codigoEstado;
     private String observaciones;
-
-    // REFACTOR: productos ahora se manejan en el módulo de Ventas
-    // Usar VentasService.obtenerVentasPorOrdenServicio() para obtener ventas asociadas
+    private boolean activo;
+    private LocalDateTime fechaReparado;
+    private LocalDateTime fechaEntrega;
 
     // Getters y Setters
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
+
+    public String getCodigoSede() { return codigoSede; }
+    public void setCodigoSede(String codigoSede) { this.codigoSede = codigoSede; }
+
+    public String getNombreSede() { return nombreSede; }
+    public void setNombreSede(String nombreSede) { this.nombreSede = nombreSede; }
 
     public String getClienteId() { return clienteId; }
     public void setClienteId(String clienteId) { this.clienteId = clienteId; }
@@ -134,4 +143,13 @@ public class OrdenDeServicioDto {
 
     public String getObservaciones() { return observaciones; }
     public void setObservaciones(String observaciones) { this.observaciones = observaciones; }
+
+    public boolean isActivo() { return activo; }
+    public void setActivo(boolean activo) { this.activo = activo; }
+
+    public LocalDateTime getFechaReparado() { return fechaReparado; }
+    public void setFechaReparado(LocalDateTime fechaReparado) { this.fechaReparado = fechaReparado; }
+
+    public LocalDateTime getFechaEntrega() { return fechaEntrega; }
+    public void setFechaEntrega(LocalDateTime fechaEntrega) { this.fechaEntrega = fechaEntrega; }
 }

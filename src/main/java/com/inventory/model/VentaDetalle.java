@@ -46,6 +46,14 @@ public class VentaDetalle {
     @Column(nullable = false)
     private BigDecimal precioUnitario;
 
+    /** Descuento aplicado a esta línea (en moneda). Default 0. */
+    @Column(name = "descuento", precision = 10, scale = 2, nullable = false)
+    private BigDecimal descuento = BigDecimal.ZERO;
+
+    /** Impuesto (IVA) aplicado a esta línea (en moneda). Default 0. */
+    @Column(name = "impuesto", precision = 10, scale = 2, nullable = false)
+    private BigDecimal impuesto = BigDecimal.ZERO;
+
     @Column(nullable = false)
     private BigDecimal subtotal;
 
@@ -92,6 +100,12 @@ public class VentaDetalle {
 
     public BigDecimal getPrecioUnitario() { return precioUnitario; }
     public void setPrecioUnitario(BigDecimal precioUnitario) { this.precioUnitario = precioUnitario; }
+
+    public BigDecimal getDescuento() { return descuento != null ? descuento : BigDecimal.ZERO; }
+    public void setDescuento(BigDecimal descuento) { this.descuento = descuento; }
+
+    public BigDecimal getImpuesto() { return impuesto != null ? impuesto : BigDecimal.ZERO; }
+    public void setImpuesto(BigDecimal impuesto) { this.impuesto = impuesto; }
 
     public BigDecimal getSubtotal() { return subtotal; }
     public void setSubtotal(BigDecimal subtotal) { this.subtotal = subtotal; }

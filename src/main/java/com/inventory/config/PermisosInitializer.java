@@ -6,16 +6,22 @@ import com.inventory.model.Rol;
 import com.inventory.repository.PermisosRepository;
 import com.inventory.repository.RolePermissionRepository;
 import com.inventory.repository.RolesRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
+import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-@Configuration
-public class PermisosInitializer {
+@Component
+@Order(20)
+public class PermisosInitializer implements CommandLineRunner {
+
+    @Autowired private PermisosRepository permisosRepo;
+    @Autowired private RolePermissionRepository rolePermissionRepo;
+    @Autowired private RolesRepository rolesRepo;
 
     /**
      * Catálogo base de permisos granulares.
@@ -94,7 +100,24 @@ public class PermisosInitializer {
         new String[]{"services.read",   "Ver servicios",      "services", null, "read"},
         new String[]{"services.create", "Crear servicios",    "services", null, "create"},
         new String[]{"services.update", "Editar servicios",   "services", null, "update"},
-        new String[]{"services.delete", "Eliminar servicios", "services", null, "delete"}
+        new String[]{"services.delete", "Eliminar servicios", "services", null, "delete"},
+        // config — sedes
+        new String[]{"config.sedes.read",   "Ver sedes",            "config", "sedes", "read"},
+        new String[]{"config.sedes.create", "Crear sedes",          "config", "sedes", "create"},
+        new String[]{"config.sedes.update", "Editar sedes",         "config", "sedes", "update"},
+        new String[]{"config.sedes.delete", "Eliminar sedes",       "config", "sedes", "delete"},
+        new String[]{"config.sedes.toggle", "Activar/desactivar sedes", "config", "sedes", "toggle"},
+        // config — proveedores
+        new String[]{"config.proveedores.read",   "Ver proveedores",            "config", "proveedores", "read"},
+        new String[]{"config.proveedores.create", "Crear proveedores",          "config", "proveedores", "create"},
+        new String[]{"config.proveedores.update", "Editar proveedores",         "config", "proveedores", "update"},
+        new String[]{"config.proveedores.delete", "Eliminar proveedores",       "config", "proveedores", "delete"},
+        // inventory — stock por sede
+        new String[]{"inventory.stock.read",   "Ver stock por sede",    "inventory", "stock", "read"},
+        new String[]{"inventory.stock.update", "Ajustar stock por sede","inventory", "stock", "update"},
+        // config — configuración global
+        new String[]{"config.global.read",  "Ver configuración global",    "config", "global", "read"},
+        new String[]{"config.global.write", "Editar configuración global", "config", "global", "write"}
     );
 
     /** Permisos asignados por defecto a cada rol */
@@ -110,11 +133,8 @@ public class PermisosInitializer {
         "CLIENTE", List.of("inventory.read", "orders.read", "sales.read")
     );
 
-    @Bean
-    CommandLineRunner initPermisos(PermisosRepository permisosRepo,
-                                   RolePermissionRepository rolePermissionRepo,
-                                   RolesRepository rolesRepo) {
-        return args -> {
+    @Override
+    public void run(String... args) {
             // 1. Seed del catálogo de permisos — upsert: inserta si no existe, actualiza si cambió moduleKey/categoryKey
             for (String[] entry : CATALOG) {
                 permisosRepo.findByCode(entry[0]).ifPresentOrElse(
@@ -163,7 +183,6 @@ public class PermisosInitializer {
                         );
                 }
             }
-        };
     }
 }
 

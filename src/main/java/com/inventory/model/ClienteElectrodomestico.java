@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 @Table(name = "cliente_electrodomesticos",
     uniqueConstraints = @UniqueConstraint(
         name = "uk_serial_marca_cliente",
-        columnNames = {"numero_serie", "marca_electrodomestico_id", "cliente_id", "cliente_tipo_documento"}
+        columnNames = {"numero_serie", "marca_electrodomestico_id", "cliente_id"}
     )
 )
 public class ClienteElectrodomestico {
@@ -18,10 +18,7 @@ public class ClienteElectrodomestico {
     private Long id;
     
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumns({
-        @JoinColumn(name = "cliente_id", nullable = false),
-        @JoinColumn(name = "cliente_tipo_documento", nullable = false)
-    })
+    @JoinColumn(name = "cliente_id", referencedColumnName = "id", nullable = false)
     private Cliente cliente;
     
     @Column(name = "electrodomestico_tipo")
@@ -53,9 +50,6 @@ public class ClienteElectrodomestico {
     @Column(columnDefinition = "TEXT")
     private String notas;
     
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "usuario_username", nullable = false)
-    private User usuario;
     
     public ClienteElectrodomestico() {
         this.fechaRegistro = LocalDateTime.now();
@@ -63,11 +57,10 @@ public class ClienteElectrodomestico {
         this.garantiaVigente = false;
     }
     
-    public ClienteElectrodomestico(Cliente cliente, String numeroSerie, User usuario) {
+    public ClienteElectrodomestico(Cliente cliente, String numeroSerie) {
         this();
         this.cliente = cliente;
         this.numeroSerie = numeroSerie;
-        this.usuario = usuario;
     }
     
     // Getters y Setters
@@ -174,15 +167,7 @@ public class ClienteElectrodomestico {
     public void setNotas(String notas) {
         this.notas = notas;
     }
-    
-    public User getUsuario() {
-        return usuario;
-    }
-    
-    public void setUsuario(User usuario) {
-        this.usuario = usuario;
-    }
-    
+
     @Override
     public String toString() {
         return "ClienteElectrodomestico{" +

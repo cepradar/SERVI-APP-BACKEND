@@ -105,7 +105,7 @@ public class VentasController {
      */
     @GetMapping("/{ventaId}")
     @PreAuthorize("hasAnyRole('ADMIN', 'TECNICO')")
-    public ResponseEntity<VentaDto> obtenerVentaPorId(@PathVariable Long ventaId, Authentication auth) {
+    public ResponseEntity<VentaDto> obtenerVentaPorId(@PathVariable String ventaId, Authentication auth) {
         VentaDto venta = ventasService.obtenerVentaPorId(ventaId);
         boolean isTecnico = auth.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_TECNICO"));

@@ -7,7 +7,6 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.JoinColumns;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
@@ -25,17 +24,14 @@ public class EventoProducto {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "tipoDeEvento_id", nullable = false)
-    private TipoEvento tipoDeEvento;
+    private Evento tipoDeEvento;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "producto_id", nullable = false)
     private Product producto;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumns({
-        @JoinColumn(name = "cliente_id"),
-        @JoinColumn(name = "cliente_tipo_documento")
-    })
+    @JoinColumn(name = "cliente_id", referencedColumnName = "id")
     private Cliente cliente;
 
     @Column(nullable = false)
@@ -47,7 +43,7 @@ public class EventoProducto {
     // Constructor vacío requerido por JPA
     public EventoProducto() {}
 
-    public EventoProducto(String id, User usuario, TipoEvento tipoDeEvento, Product producto,
+    public EventoProducto(String id, User usuario, Evento tipoDeEvento, Product producto,
             LocalDateTime fechaEvento) {
         this.id = id;
         this.usuario = usuario;
@@ -72,11 +68,11 @@ public class EventoProducto {
         this.usuario = usuario;
     }
 
-    public TipoEvento getTipoDeEvento() {
+    public Evento getTipoDeEvento() {
         return tipoDeEvento;
     }
 
-    public void setTipoDeEvento(TipoEvento tipoDeEvento) {
+    public void setTipoDeEvento(Evento tipoDeEvento) {
         this.tipoDeEvento = tipoDeEvento;
     }
 

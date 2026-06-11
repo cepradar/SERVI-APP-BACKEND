@@ -31,7 +31,7 @@ public class FacturaController {
      */
     @GetMapping("/pdf/{ventaId}")
     @PreAuthorize("hasAnyRole('ADMIN', 'TECNICO')")
-    public ResponseEntity<byte[]> generarFactura(@PathVariable Long ventaId, Authentication auth) {
+    public ResponseEntity<byte[]> generarFactura(@PathVariable String ventaId, Authentication auth) {
         try {
             boolean isTecnico = auth.getAuthorities().stream()
                     .anyMatch(a -> a.getAuthority().equals("ROLE_TECNICO"));

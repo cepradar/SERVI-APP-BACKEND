@@ -7,7 +7,6 @@ import com.inventory.model.PermissionAuditLog;
 import com.inventory.model.Permisos;
 import com.inventory.model.Rol;
 import com.inventory.model.RolePermission;
-import com.inventory.model.RolePermissionId;
 import com.inventory.repository.PermissionAuditLogRepository;
 import com.inventory.repository.PermisosRepository;
 import com.inventory.repository.RolePermissionRepository;

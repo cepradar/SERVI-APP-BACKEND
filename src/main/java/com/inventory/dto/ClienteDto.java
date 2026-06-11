@@ -8,8 +8,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class ClienteDto {
 
-    private String documento;  // ID del cliente (documento)
-    private String nit;
+    private Long id;           // PK auto-generado
+    private String nit;        // Número de documento del cliente
     private String categoryId;
     private String categoryName;
     private String tipoDocumentoId;
@@ -19,30 +19,38 @@ public class ClienteDto {
     private String telefono;
     private String direccion;
     private Boolean activo;
-    
-    // Campos adicionales del frontend
     private String email;
     private String ciudad;
+    private String ciudadCod;
+    private String departamento;
+    private String observaciones;
 
-    // Constructor desde entidad Cliente
     public ClienteDto(Cliente cliente) {
-        this.documento = cliente.getId();
+        this.id  = cliente.getId();
         this.nit = cliente.getNit();
-        
+
         if (cliente.getCategory() != null) {
-            this.categoryId = cliente.getCategory().getId();
+            this.categoryId   = cliente.getCategory().getId();
             this.categoryName = cliente.getCategory().getName();
         }
-        
+
         if (cliente.getTipoDocumento() != null) {
-            this.tipoDocumentoId = cliente.getTipoDocumento().getId();
+            this.tipoDocumentoId   = cliente.getTipoDocumento().getId();
             this.tipoDocumentoName = cliente.getTipoDocumento().getName();
+        } else {
+            this.tipoDocumentoId = cliente.getTipoDocumentoId();
         }
-        
-        this.nombre = cliente.getNombre();
-        this.apellido = cliente.getApellido();
-        this.telefono = cliente.getTelefono();
-        this.direccion = cliente.getDireccion();
-        this.activo = cliente.getActivo();
+
+        this.nombre      = cliente.getNombre();
+        this.apellido    = cliente.getApellido();
+        this.telefono    = cliente.getTelefono();
+        this.direccion   = cliente.getDireccion();
+        this.activo      = cliente.getActivo();
+        this.email       = cliente.getEmail();
+
+        if (cliente.getCiudadObj() != null) {
+            this.ciudadCod = cliente.getCiudadObj().getCiudadCod();
+            this.ciudad    = cliente.getCiudadObj().getNombre();
+        }
     }
 }

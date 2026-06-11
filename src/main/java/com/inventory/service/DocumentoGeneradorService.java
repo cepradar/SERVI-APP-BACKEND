@@ -66,7 +66,7 @@ public class DocumentoGeneradorService {
      * @param ventaId ID de la venta
      * @return bytes del PDF
      */
-    public byte[] generarFactura(Long ventaId) throws Exception {
+    public byte[] generarFactura(String ventaId) throws Exception {
         VentaDto venta = ventasService.obtenerVentaPorId(ventaId);
         Map<String, String> empresa = buildEmpresaMap();
 

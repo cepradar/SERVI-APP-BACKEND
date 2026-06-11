@@ -12,10 +12,10 @@ public class Rol {
     private String name;
 
     @Column(nullable = true)
-    private String color;
+    private String description;
 
     @Column(nullable = true)
-    private String description;
+    private String color;
 
     @Column(nullable = false)
     private Boolean active = true;

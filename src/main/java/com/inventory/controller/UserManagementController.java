@@ -1,9 +1,11 @@
 package com.inventory.controller;
 
 import com.inventory.dto.UserDto;
+import com.inventory.dto.UsuarioSedeDto;
 import com.inventory.model.User;
 import com.inventory.model.Rol;
 import com.inventory.service.UsuarioService;
+import com.inventory.service.SedeService;
 import com.inventory.repository.RolesRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -29,6 +31,9 @@ public class UserManagementController {
 
     @Autowired
     private RolesRepository roleRepository;
+
+    @Autowired
+    private SedeService sedeService;
 
     @GetMapping
     public ResponseEntity<List<UserDto>> getAllUsers() {
@@ -139,6 +144,48 @@ public class UserManagementController {
         } catch (Exception e) {
             logger.error("Error al eliminar usuario: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    // ── Gestión de sedes por usuario ─────────────────────────────────────────
+
+    @GetMapping("/{username}/sedes")
+    public ResponseEntity<?> getSedesUsuario(@PathVariable String username) {
+        try {
+            return ResponseEntity.ok(sedeService.listarSedesDeUsuario(username));
+        } catch (Exception e) {
+            logger.error("Error al obtener sedes del usuario {}: {}", username, e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(java.util.Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/{username}/sedes/{codigoSede}")
+    public ResponseEntity<?> asignarSedeAUsuario(@PathVariable String username,
+                                                  @PathVariable String codigoSede) {
+        try {
+            UsuarioSedeDto asignacion = sedeService.asignarSedeAUsuario(username, codigoSede);
+            return ResponseEntity.status(HttpStatus.CREATED).body(asignacion);
+        } catch (IllegalStateException e) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(java.util.Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            logger.error("Error al asignar sede {} al usuario {}: {}", codigoSede, username, e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(java.util.Map.of("error", e.getMessage()));
+        }
+    }
+
+    @DeleteMapping("/{username}/sedes/{codigoSede}")
+    public ResponseEntity<?> removerSedeDeUsuario(@PathVariable String username,
+                                                   @PathVariable String codigoSede) {
+        try {
+            sedeService.removerSedeDeUsuario(username, codigoSede);
+            return ResponseEntity.ok(java.util.Map.of("mensaje", "Sede removida del usuario exitosamente"));
+        } catch (Exception e) {
+            logger.error("Error al remover sede {} del usuario {}: {}", codigoSede, username, e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(java.util.Map.of("error", e.getMessage()));
         }
     }
 }

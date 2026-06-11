@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.Data;
 import java.time.LocalDateTime;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 @Entity
 @Table(name = "company")
 @Data
@@ -13,28 +15,28 @@ public class Company {
     private Long id;
 
     @Column(nullable = false, unique = true)
-    private String razonSocial;
+    private String nit;
 
     @Column(nullable = false, unique = true)
-    private String nit;
+    private String razonSocial;
 
     @Column(nullable = true)
     private String direccion;
-
-    @Column(nullable = true)
-    private String ciudad;
-
-    @Column(nullable = true)
-    private String departamento;
-
-    @Column(nullable = true)
-    private String codigoPostal;
-
+    
     @Column(nullable = true)
     private String telefono;
 
     @Column(nullable = true)
     private String correo;
+
+    /** FK hacia la tabla ciudades (código DANE). Nullable para compatibilidad. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "ciudad_cod", referencedColumnName = "ciudad_cod", nullable = true)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+    private Ciudad ciudadObj;
+
+    @Column(nullable = true)
+    private String codigoPostal;
 
     @Column(nullable = true)
     private String sitioWeb;
@@ -110,22 +112,6 @@ public class Company {
 
     public void setDireccion(String direccion) {
         this.direccion = direccion;
-    }
-
-    public String getCiudad() {
-        return ciudad;
-    }
-
-    public void setCiudad(String ciudad) {
-        this.ciudad = ciudad;
-    }
-
-    public String getDepartamento() {
-        return departamento;
-    }
-
-    public void setDepartamento(String departamento) {
-        this.departamento = departamento;
     }
 
     public String getCodigoPostal() {

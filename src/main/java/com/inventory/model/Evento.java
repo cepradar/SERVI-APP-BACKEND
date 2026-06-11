@@ -3,8 +3,8 @@ package com.inventory.model;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "tipo_evento")
-public class TipoEvento {
+@Table(name = "eventos")
+public class Evento {
 
     @Id
     @Column(nullable = false, unique = true)
@@ -15,12 +15,12 @@ public class TipoEvento {
 
     @ManyToOne(optional = false, fetch = FetchType.EAGER)
     @JoinColumn(name = "categoria_id", nullable = false)
-    private CategoriaTipoEvento categoria;
+    private CategoriaEvento categoria;
 
     // Constructor vacío requerido por JPA
-    public TipoEvento() {}
+    public Evento() {}
 
-    public TipoEvento(String id, String nombre, CategoriaTipoEvento categoria) {
+    public Evento(String id, String nombre, CategoriaEvento categoria) {
         this.id = id;
         this.nombre = nombre;
         this.categoria = categoria;
@@ -42,11 +42,11 @@ public class TipoEvento {
         this.nombre = nombre;
     }
 
-    public CategoriaTipoEvento getCategoria() {
+    public CategoriaEvento getCategoria() {
         return categoria;
     }
 
-    public void setCategoria(CategoriaTipoEvento categoria) {
+    public void setCategoria(CategoriaEvento categoria) {
         this.categoria = categoria;
     }
 }

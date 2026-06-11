@@ -82,8 +82,6 @@ public class CompanyService {
         company.setRazonSocial(companyDto.getRazonSocial());
         company.setNit(companyDto.getNit());
         company.setDireccion(companyDto.getDireccion());
-        company.setCiudad(companyDto.getCiudad());
-        company.setDepartamento(companyDto.getDepartamento());
         company.setCodigoPostal(companyDto.getCodigoPostal());
         company.setTelefono(companyDto.getTelefono());
         company.setCorreo(companyDto.getCorreo());

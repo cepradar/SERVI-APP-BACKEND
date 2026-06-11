@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
 
 @Component
-@Order(20)
+@Order(50)
 public class ServicioPruebaInitializer implements CommandLineRunner {
 
     @Autowired private ServicioRepository servicioRepository;

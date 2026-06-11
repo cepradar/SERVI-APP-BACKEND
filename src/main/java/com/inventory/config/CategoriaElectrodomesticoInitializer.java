@@ -11,7 +11,7 @@ import java.util.Arrays;
 import java.util.List;
 
 @Component
-@Order(5)
+@Order(10)
 public class CategoriaElectrodomesticoInitializer implements CommandLineRunner {
 
     @Autowired

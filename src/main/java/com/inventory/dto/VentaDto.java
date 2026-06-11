@@ -5,7 +5,12 @@ import java.util.List;
 import java.math.BigDecimal;
 
 public class VentaDto {
-    private Long id;
+    /** ID de la venta = código legible. Formato: V-{CODIGO_SEDE}-{CONSECUTIVO}. Ej: V-BQ-000115 */
+    private String id;
+    /** Código de la sede donde se realizó la venta. */
+    private String codigoSede;
+    /** Nombre de la sede para mostrar en UI. */
+    private String nombreSede;
     private BigDecimal totalVenta;
     /** Nombre + apellido derivado de la FK cliente. Solo lectura. */
     private String nombreComprador;
@@ -22,11 +27,17 @@ public class VentaDto {
     private LocalDateTime fecha;
     private String observaciones;
     private String ordenDeServicioId;
+    /** Estado de la venta: PAGADA, PENDIENTE, ANULADA */
+    private String estado;
+    /** Forma de pago: EFECTIVO, TARJETA, TRANSFERENCIA, CREDITO, MIXTO, OTRO */
+    private String formaPago;
+    /** Descuento global aplicado (en moneda) */
+    private java.math.BigDecimal descuento;
     private List<VentaDetalleDto> detalles;
 
     public VentaDto() {}
 
-    public VentaDto(Long id, BigDecimal totalVenta, String nombreComprador, String telefonoComprador,
+    public VentaDto(String id, BigDecimal totalVenta, String nombreComprador, String telefonoComprador,
                     String emailComprador, String usuarioUsername, String usuarioNombre,
                     LocalDateTime fecha, String observaciones, List<VentaDetalleDto> detalles) {
         this.id = id;
@@ -43,8 +54,14 @@ public class VentaDto {
 
     // Getters y Setters
 
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    public String getId() { return id; }
+    public void setId(String id) { this.id = id; }
+
+    public String getCodigoSede() { return codigoSede; }
+    public void setCodigoSede(String codigoSede) { this.codigoSede = codigoSede; }
+
+    public String getNombreSede() { return nombreSede; }
+    public void setNombreSede(String nombreSede) { this.nombreSede = nombreSede; }
 
     public BigDecimal getTotalVenta() { return totalVenta; }
     public void setTotalVenta(BigDecimal totalVenta) { this.totalVenta = totalVenta; }
@@ -72,6 +89,15 @@ public class VentaDto {
 
     public String getOrdenDeServicioId() { return ordenDeServicioId; }
     public void setOrdenDeServicioId(String ordenDeServicioId) { this.ordenDeServicioId = ordenDeServicioId; }
+
+    public String getEstado() { return estado; }
+    public void setEstado(String estado) { this.estado = estado; }
+
+    public String getFormaPago() { return formaPago; }
+    public void setFormaPago(String formaPago) { this.formaPago = formaPago; }
+
+    public java.math.BigDecimal getDescuento() { return descuento; }
+    public void setDescuento(java.math.BigDecimal descuento) { this.descuento = descuento; }
 
     public String getClienteId() { return clienteId; }
     public void setClienteId(String clienteId) { this.clienteId = clienteId; }

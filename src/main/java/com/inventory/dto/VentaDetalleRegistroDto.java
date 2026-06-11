@@ -20,6 +20,8 @@ public class VentaDetalleRegistroDto {
 
     private Integer cantidad;
     private BigDecimal precioUnitario;
+    /** Descuento en moneda para esta línea. Default 0 si no se envía. */
+    private BigDecimal descuento = BigDecimal.ZERO;
 
     public VentaDetalleRegistroDto() {}
 
@@ -37,4 +39,7 @@ public class VentaDetalleRegistroDto {
 
     public BigDecimal getPrecioUnitario() { return precioUnitario; }
     public void setPrecioUnitario(BigDecimal precioUnitario) { this.precioUnitario = precioUnitario; }
+
+    public BigDecimal getDescuento() { return descuento != null ? descuento : BigDecimal.ZERO; }
+    public void setDescuento(BigDecimal descuento) { this.descuento = descuento; }
 }

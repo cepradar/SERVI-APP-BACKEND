@@ -1,7 +1,6 @@
 package com.inventory.model;
 
 import jakarta.persistence.*;
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
@@ -12,27 +11,12 @@ public class Auditoria {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false)
+    private LocalDateTime fecha;
+
     @ManyToOne
-    @JoinColumn(name = "tipo_evento_id", nullable = false)
-    private TipoEvento tipoEvento;
-
-    @Column(name = "product_id", nullable = false)
-    private String productId;
-
-    @Column(name = "product_name", columnDefinition = "TEXT")
-    private String productName;
-
-    @Column(name = "cantidad_inicial", nullable = false)
-    private Integer cantidadInicial;
-
-    @Column(name = "cantidad_final", nullable = false)
-    private Integer cantidadFinal;
-
-    @Column(name = "precio_inicial", precision = 10, scale = 2, nullable = false)
-    private BigDecimal precioInicial = BigDecimal.ZERO;
-
-    @Column(name = "precio_final", precision = 10, scale = 2, nullable = false)
-    private BigDecimal precioFinal = BigDecimal.ZERO;
+    @JoinColumn(name = "evento_id", nullable = false)
+    private Evento evento;
 
     @Column(nullable = false, columnDefinition = "TEXT")
     private String descripcion;
@@ -41,145 +25,67 @@ public class Auditoria {
     @JoinColumn(name = "usuario_username", nullable = false)
     private User usuario;
 
-    @Column(nullable = false)
-    private LocalDateTime fecha;
+    @Column(name = "estado_inicial", columnDefinition = "TEXT")
+    private String estadoInicial;
 
-    @Column(columnDefinition = "TEXT")
-    private String referencia;
+    @Column(name = "estado_final", columnDefinition = "TEXT")
+    private String estadoFinal;
 
-    // Constructores
-    public Auditoria() {
-    }
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "producto_id", nullable = true, foreignKey = @ForeignKey(name = "fk_auditoria_producto"))
+    private Product producto;
 
-    public Auditoria(TipoEvento tipoEvento, String productId, String productName,
-                     Integer cantidadInicial, Integer cantidadFinal,
-                     BigDecimal precioInicial, BigDecimal precioFinal, String descripcion,
-                     User usuario, String referencia) {
-        this.tipoEvento = tipoEvento;
-        this.productId = productId;
-        this.productName = productName;
-        this.cantidadInicial = cantidadInicial;
-        this.cantidadFinal = cantidadFinal;
-        this.precioInicial = precioInicial != null ? precioInicial : BigDecimal.ZERO;
-        this.precioFinal = precioFinal != null ? precioFinal : BigDecimal.ZERO;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "venta_id", nullable = true, foreignKey = @ForeignKey(name = "fk_auditoria_venta"))
+    private Venta venta;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "orden_servicio_id", nullable = true, foreignKey = @ForeignKey(name = "fk_auditoria_orden"))
+    private OrdenDeServicio ordenDeServicio;
+
+    public Auditoria() {}
+
+    public Auditoria(Evento evento, String descripcion, User usuario, String estadoInicial, String estadoFinal) {
+        this.evento = evento;
         this.descripcion = descripcion;
         this.usuario = usuario;
-        this.referencia = referencia;
         this.fecha = LocalDateTime.now();
+        this.estadoInicial = estadoInicial;
+        this.estadoFinal = estadoFinal;
     }
 
-    // Getters y Setters
-    public Long getId() {
-        return id;
-    }
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
 
-    public void setId(Long id) {
-        this.id = id;
-    }
+    public Evento getEvento() { return evento; }
+    public void setEvento(Evento evento) { this.evento = evento; }
 
-    public TipoEvento getTipoEvento() {
-        return tipoEvento;
-    }
+    public String getDescripcion() { return descripcion; }
+    public void setDescripcion(String descripcion) { this.descripcion = descripcion; }
 
-    public void setTipoEvento(TipoEvento tipoEvento) {
-        this.tipoEvento = tipoEvento;
-    }
+    public User getUsuario() { return usuario; }
+    public void setUsuario(User usuario) { this.usuario = usuario; }
 
-    public String getProductId() {
-        return productId;
-    }
+    public LocalDateTime getFecha() { return fecha; }
+    public void setFecha(LocalDateTime fecha) { this.fecha = fecha; }
 
-    public void setProductId(String productId) {
-        this.productId = productId;
-    }
+    public String getEstadoInicial() { return estadoInicial; }
+    public void setEstadoInicial(String estadoInicial) { this.estadoInicial = estadoInicial; }
 
-    public String getProductName() {
-        return productName;
-    }
+    public String getEstadoFinal() { return estadoFinal; }
+    public void setEstadoFinal(String estadoFinal) { this.estadoFinal = estadoFinal; }
 
-    public void setProductName(String productName) {
-        this.productName = productName;
-    }
+    public Product getProducto() { return producto; }
+    public void setProducto(Product producto) { this.producto = producto; }
 
-    public Integer getCantidadInicial() {
-        return cantidadInicial;
-    }
+    public Venta getVenta() { return venta; }
+    public void setVenta(Venta venta) { this.venta = venta; }
 
-    public void setCantidadInicial(Integer cantidadInicial) {
-        this.cantidadInicial = cantidadInicial;
-    }
-
-    public Integer getCantidadFinal() {
-        return cantidadFinal;
-    }
-
-    public void setCantidadFinal(Integer cantidadFinal) {
-        this.cantidadFinal = cantidadFinal;
-    }
-
-    public BigDecimal getPrecioInicial() {
-        return precioInicial;
-    }
-
-    public void setPrecioInicial(BigDecimal precioInicial) {
-        this.precioInicial = precioInicial;
-    }
-
-    public BigDecimal getPrecioFinal() {
-        return precioFinal;
-    }
-
-    public void setPrecioFinal(BigDecimal precioFinal) {
-        this.precioFinal = precioFinal;
-    }
-
-    public String getDescripcion() {
-        return descripcion;
-    }
-
-    public void setDescripcion(String descripcion) {
-        this.descripcion = descripcion;
-    }
-
-    public User getUsuario() {
-        return usuario;
-    }
-
-    public void setUsuario(User usuario) {
-        this.usuario = usuario;
-    }
-
-    public LocalDateTime getFecha() {
-        return fecha;
-    }
-
-    public void setFecha(LocalDateTime fecha) {
-        this.fecha = fecha;
-    }
-
-    public String getReferencia() {
-        return referencia;
-    }
-
-    public void setReferencia(String referencia) {
-        this.referencia = referencia;
-    }
+    public OrdenDeServicio getOrdenDeServicio() { return ordenDeServicio; }
+    public void setOrdenDeServicio(OrdenDeServicio ordenDeServicio) { this.ordenDeServicio = ordenDeServicio; }
 
     @Override
     public String toString() {
-        return "Auditoria{" +
-                "id=" + id +
-                ", tipoEvento=" + tipoEvento +
-                ", productId=" + productId +
-                ", productName=" + productName +
-                ", cantidadInicial=" + cantidadInicial +
-                ", cantidadFinal=" + cantidadFinal +
-                ", precioInicial=" + precioInicial +
-                ", precioFinal=" + precioFinal +
-                ", descripcion='" + descripcion + '\'' +
-                ", usuario=" + usuario +
-                ", fecha=" + fecha +
-                ", referencia='" + referencia + '\'' +
-                '}';
+        return "Auditoria{id=" + id + ", evento=" + (evento != null ? evento.getId() : "null") + ", fecha=" + fecha + "}";
     }
 }

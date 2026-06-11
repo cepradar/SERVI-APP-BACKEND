@@ -1,81 +1,79 @@
 package com.inventory.model;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
-
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
+import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "clientes")
-@IdClass(ClienteId.class)
+@Table(
+    name = "clientes",
+    uniqueConstraints = @UniqueConstraint(
+        name = "uk_cliente_nit_tipo",
+        columnNames = {"nit", "tipo_documento"}
+    )
+)
 public class Cliente {
-    @Id
-    @Column(nullable = false)
-    private String id;
 
+    /** PK única auto-generada — sustituye a la anterior PK compuesta. */
     @Id
-    @Column(name = "tipo_documento", nullable = false)
-    private String tipoDocumentoId;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
+    @JsonBackReference
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "tipo_documento", nullable = false)
+    private DocumentoTipo tipoDocumento;
+
+    /** Número de documento / NIT del cliente. */
+    @Column(nullable = false, length = 30)
     private String nit;
 
-    @JsonBackReference // Evita la serialización recursiva
-    @ManyToOne(fetch = FetchType.EAGER)  // Puedes cambiarlo a LAZY si es necesario
+    @Column(nullable = false, length = 30)
+    private String nombre;
+    
+    @Column(nullable = false, length = 30)
+    private String apellido;
+
+    @Column(length = 20)
+    private String telefono;
+
+    @Column(length = 100)
+    private String direccion;
+    @Column(length = 100)
+    private String email;
+
+
+    @JsonBackReference
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "tipo_cliente", nullable = false)
     private CategoryClient category;
 
-    @JsonBackReference // Evita la serialización recursiva
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "tipo_documento", nullable = false, insertable = false, updatable = false)
-    private DocumentoTipo tipoDocumento;
+    /** FK hacia la tabla ciudades (código DANE). Nullable para compatibilidad. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "ciudad_cod", referencedColumnName = "ciudad_cod", nullable = true)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+    private Ciudad ciudadObj;
 
-    private String nombre;
-    private String apellido;
+    @Column(name = "fecha_creacion", nullable = true, updatable = false)
+    private LocalDateTime fechaCreacion;
 
-    private String telefono;
-    private String direccion;
-    private String email;
     private Boolean activo;
 
-    public Cliente() {
+    @PrePersist
+    protected void onCreate() {
+        if (this.fechaCreacion == null) this.fechaCreacion = LocalDateTime.now();
     }
 
-    public Cliente(String id, String nit, CategoryClient category, DocumentoTipo tipoDocumento, String nombre, String apellido,
-            String telefono, String direccion, Boolean activo) {
-        this.id = id;
-        this.nit = nit;
-        this.category = category;
-        this.tipoDocumento = tipoDocumento;
-        this.tipoDocumentoId = tipoDocumento != null ? tipoDocumento.getId() : null;
-        this.nombre = nombre;
-        this.apellido = apellido;
-        this.telefono = telefono;
-        this.direccion = direccion;
-        this.activo = activo;
-    }
+    public Cliente() {}
 
-    public String getId() {
-        return id;
-    }
+    // ── Getters / Setters ─────────────────────────────────────────────────
 
-    public void setId(String id) {
-        this.id = id;
-    }
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
 
-    public String getTipoDocumentoId() {
-        return tipoDocumentoId;
-    }
-
-    public void setTipoDocumentoId(String tipoDocumentoId) {
-        this.tipoDocumentoId = tipoDocumentoId;
-    }
-
-    public String getNit() {
-        return nit;
-    }
-
-    public void setNit(String nit) {
-        this.nit = nit;
-    }
+    public String getNit() { return nit; }
+    public void setNit(String nit) { this.nit = nit; }
 
     public CategoryClient getCategory() {
         return category;
@@ -88,10 +86,12 @@ public class Cliente {
     public DocumentoTipo getTipoDocumento() {
         return tipoDocumento;
     }
-
     public void setTipoDocumento(DocumentoTipo tipoDocumento) {
         this.tipoDocumento = tipoDocumento;
-        this.tipoDocumentoId = tipoDocumento != null ? tipoDocumento.getId() : null;
+    }
+
+    public String getTipoDocumentoId() {
+        return tipoDocumento != null ? tipoDocumento.getId() : null;
     }
 
     public String getNombre() {
@@ -141,5 +141,10 @@ public class Cliente {
     public void setEmail(String email) {
         this.email = email;
     }
+
+    public Ciudad getCiudadObj() { return ciudadObj; }
+    public void setCiudadObj(Ciudad ciudadObj) { this.ciudadObj = ciudadObj; }
+
+    public LocalDateTime getFechaCreacion() { return fechaCreacion; }
 
 }

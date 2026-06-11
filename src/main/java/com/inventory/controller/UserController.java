@@ -66,10 +66,10 @@ public class UserController {
             if (request.getLastName() == null || request.getLastName().trim().isEmpty()) {
                 return ResponseEntity.badRequest().body(Map.of("error", "El apellido es obligatorio"));
             }
-            if (request.getDocumento() == null || request.getDocumento().trim().isEmpty()) {
+            if (request.getNit() == null || request.getNit().trim().isEmpty()) {
                 return ResponseEntity.badRequest().body(Map.of("error", "El número de documento es obligatorio"));
             }
-            if (!request.getDocumento().trim().matches("^[A-Za-z0-9\\-]{3,20}$")) {
+            if (!request.getNit().trim().matches("^[A-Za-z0-9\\-]{3,20}$")) {
                 return ResponseEntity.badRequest().body(Map.of("error", "El número de documento no es válido"));
             }
 
@@ -79,7 +79,7 @@ public class UserController {
                 request.getFirstName().trim(),
                 request.getLastName().trim(),
                 request.getTelefono(),
-                request.getDocumento().trim(),
+                request.getNit().trim(),
                 request.getTipoDocumento(),
                 request.getDireccion() != null ? request.getDireccion().trim() : null
             );

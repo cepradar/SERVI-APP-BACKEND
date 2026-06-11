@@ -29,17 +29,17 @@ public class ClienteService {
     private DocumentoTipoRepository documentoTipoRepository;
 
     public ClienteDto crearCliente(ClienteDto clienteDto){
-        String documento = clienteDto.getDocumento() != null ? clienteDto.getDocumento().trim() : null;
+        String nit = clienteDto.getNit() != null ? clienteDto.getNit().trim() : null;
         String tipoDocumentoId = clienteDto.getTipoDocumentoId() != null ? clienteDto.getTipoDocumentoId().trim() : null;
-        if (documento == null || documento.isEmpty() || tipoDocumentoId == null || tipoDocumentoId.isEmpty()) {
-            throw new IllegalArgumentException("Documento y tipo de documento son obligatorios");
+        if (nit == null || nit.isEmpty() || tipoDocumentoId == null || tipoDocumentoId.isEmpty()) {
+            throw new IllegalArgumentException("Nit y tipo de documento son obligatorios");
         }
-        if (clienteRepository.existsByIdAndTipoDocumentoId(documento, tipoDocumentoId)) {
-            throw new IllegalStateException("Cliente ya existe con el mismo documento y tipo de documento");
+        if (clienteRepository.existsByNitAndTipoDocumentoId(nit, tipoDocumentoId)) {
+            throw new IllegalStateException("Cliente ya existe con el mismo nit y tipo de documento");
         }
 
         Cliente cliente = convertirDtoAEntidad(clienteDto);
-        cliente.setId(documento); // El documento es parte de la PK
+        // id es auto-generado, no se asigna manualmente
         Cliente clienteGuardado = clienteRepository.save(cliente);
         return new ClienteDto(clienteGuardado);
     }
@@ -50,28 +50,28 @@ public class ClienteService {
                 .collect(Collectors.toList());
     }
 
-    public List<ClienteDto> buscarClientesPorDocumento(String documento){
-        if (documento == null || documento.trim().isEmpty()) {
+    public List<ClienteDto> buscarClientesPorNit(String nit){
+        if (nit == null || nit.trim().isEmpty()) {
             return List.of();
         }
-        return clienteRepository.findByDocumento(documento).stream()
+        return clienteRepository.findByNit(nit).stream()
                 .map(ClienteDto::new)
                 .collect(Collectors.toList());
     }
 
-    public Optional<ClienteDto> buscarCliente(String documento, String tipoDocumentoId){
-        if (documento == null || documento.trim().isEmpty() || tipoDocumentoId == null || tipoDocumentoId.trim().isEmpty()) {
+    public Optional<ClienteDto> buscarCliente(String nit, String tipoDocumentoId){
+        if (nit == null || nit.trim().isEmpty() || tipoDocumentoId == null || tipoDocumentoId.trim().isEmpty()) {
             return Optional.empty();
         }
-        Optional<Cliente> cli = clienteRepository.findByIdAndTipoDocumentoId(documento, tipoDocumentoId);
+        Optional<Cliente> cli = clienteRepository.findByNitAndTipoDocumentoId(nit, tipoDocumentoId);
         return cli.map(ClienteDto::new);
     }
 
-    public ClienteDto actualizarCliente(String documento, String tipoDocumentoId, ClienteDto clienteDto){
-        if (documento == null || documento.trim().isEmpty() || tipoDocumentoId == null || tipoDocumentoId.trim().isEmpty()) {
-            throw new RuntimeException("Documento y tipo de documento son obligatorios");
+    public ClienteDto actualizarCliente(String nit, String tipoDocumentoId, ClienteDto clienteDto){
+        if (nit == null || nit.trim().isEmpty() || tipoDocumentoId == null || tipoDocumentoId.trim().isEmpty()) {
+            throw new RuntimeException("Nit y tipo de documento son obligatorios");
         }
-        Cliente clienteExistente = clienteRepository.findByIdAndTipoDocumentoId(documento, tipoDocumentoId)
+        Cliente clienteExistente = clienteRepository.findByNitAndTipoDocumentoId(nit, tipoDocumentoId)
                 .orElseThrow(() -> new RuntimeException("Cliente no encontrado"));
         
         // Actualizar campos
@@ -80,6 +80,7 @@ public class ClienteService {
         clienteExistente.setTelefono(clienteDto.getTelefono());
         clienteExistente.setDireccion(clienteDto.getDireccion());
         clienteExistente.setActivo(clienteDto.getActivo());
+        if (clienteDto.getEmail() != null) clienteExistente.setEmail(clienteDto.getEmail());
         
         // Actualizar categoría si cambió
         if (clienteDto.getCategoryId() != null) {
@@ -101,24 +102,24 @@ public class ClienteService {
         return new ClienteDto(clienteActualizado);
     }
 
-    public void eliminarCliente(String documento, String tipoDocumentoId){
-        if (documento == null || documento.trim().isEmpty() || tipoDocumentoId == null || tipoDocumentoId.trim().isEmpty()) {
-            throw new RuntimeException("Documento y tipo de documento son obligatorios");
+    public void eliminarCliente(String nit, String tipoDocumentoId){
+        if (nit == null || nit.trim().isEmpty() || tipoDocumentoId == null || tipoDocumentoId.trim().isEmpty()) {
+            throw new RuntimeException("Nit y tipo de documento son obligatorios");
         }
-        Cliente clienteExistente = clienteRepository.findByIdAndTipoDocumentoId(documento, tipoDocumentoId)
+        Cliente clienteExistente = clienteRepository.findByNitAndTipoDocumentoId(nit, tipoDocumentoId)
                 .orElseThrow(() -> new RuntimeException("Cliente no encontrado"));
         clienteRepository.delete(clienteExistente);
     }
 
     private Cliente convertirDtoAEntidad(ClienteDto clienteDto){
         Cliente cliente = new Cliente();
-        cliente.setId(clienteDto.getDocumento());
-        cliente.setNit(clienteDto.getNit() != null ? clienteDto.getNit() : clienteDto.getDocumento());
+        cliente.setNit(clienteDto.getNit());
         cliente.setNombre(clienteDto.getNombre());
         cliente.setApellido(clienteDto.getApellido());
         cliente.setTelefono(clienteDto.getTelefono());
         cliente.setDireccion(clienteDto.getDireccion());
-        cliente.setActivo(true); // Por defecto activo al crear
+        if (clienteDto.getEmail() != null) cliente.setEmail(clienteDto.getEmail());
+        cliente.setActivo(true);
         
         // Buscar y asignar la categoría desde el formulario o la primera disponible
         CategoryClient category;

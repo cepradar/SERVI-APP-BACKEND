@@ -1,7 +1,6 @@
 package com.inventory.repository;
 
 import com.inventory.model.RolePermission;
-import com.inventory.model.RolePermissionId;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -12,7 +11,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface RolePermissionRepository extends JpaRepository<RolePermission, RolePermissionId> {
+public interface RolePermissionRepository extends JpaRepository<RolePermission, String> {
 
     @Query("SELECT rp FROM RolePermission rp JOIN FETCH rp.permission WHERE rp.role.name = :roleName")
     List<RolePermission> findByRoleName(@Param("roleName") String roleName);

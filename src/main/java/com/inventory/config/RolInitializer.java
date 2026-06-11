@@ -1,34 +1,33 @@
 package com.inventory.config;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
+import org.springframework.stereotype.Component;
 
 import com.inventory.model.Rol;
 import com.inventory.repository.RolesRepository;
 
-@Configuration
-public class RolInitializer {
+@Component
+@Order(10)
+public class RolInitializer implements CommandLineRunner {
 
-    @Bean
-    CommandLineRunner initRoles(RolesRepository roleRepository) {
-        return args -> {
-            if (roleRepository.findByName("ADMIN") == null) {
-                Rol adminRole = new Rol("ADMIN", "#4f46e5", "Administrador del sistema");
-                roleRepository.save(adminRole);
-            }
-            if (roleRepository.findByName("CLIENTE") == null) {
-                Rol clienteRole = new Rol("CLIENTE", "#2563eb", "Cliente con acceso basico");
-                roleRepository.save(clienteRole);
-            }
-            if (roleRepository.findByName("TECNICO") == null) {
-                Rol tecnicoRole = new Rol("TECNICO", "#16a34a", "Tecnico de servicio");
-                roleRepository.save(tecnicoRole);
-            }
-            if (roleRepository.findByName("USER") == null) {
-                Rol userRole = new Rol("USER", "#2563eb", "Usuario interno");
-                roleRepository.save(userRole);
-            }
-        };
+    @Autowired
+    private RolesRepository roleRepository;
+
+    @Override
+    public void run(String... args) {
+        if (roleRepository.findByName("ADMIN") == null) {
+            roleRepository.save(new Rol("ADMIN", "#4f46e5", "Administrador del sistema"));
+        }
+        if (roleRepository.findByName("CLIENTE") == null) {
+            roleRepository.save(new Rol("CLIENTE", "#2563eb", "Cliente con acceso basico"));
+        }
+        if (roleRepository.findByName("TECNICO") == null) {
+            roleRepository.save(new Rol("TECNICO", "#16a34a", "Tecnico de servicio"));
+        }
+        if (roleRepository.findByName("USER") == null) {
+            roleRepository.save(new Rol("USER", "#2563eb", "Usuario interno"));
+        }
     }
 }

@@ -4,40 +4,42 @@ import com.inventory.model.Rol;
 import com.inventory.model.User;
 import com.inventory.repository.RolesRepository;
 import com.inventory.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Component;
 
-@Configuration
-public class AdminUserInitializer {
+@Component
+@Order(20)
+public class AdminUserInitializer implements CommandLineRunner {
 
     private static final String ADMIN_USERNAME = "ADMIN";
     private static final String ADMIN_PASSWORD = "CANEYA";
 
-    @Bean
-    CommandLineRunner initAdminUser(UserRepository userRepository,
-                                   RolesRepository rolesRepository,
-                                   PasswordEncoder passwordEncoder) {
-        return args -> {
-            if (userRepository.existsById(ADMIN_USERNAME)) {
-                return;
-            }
+    @Autowired private UserRepository userRepository;
+    @Autowired private RolesRepository rolesRepository;
+    @Autowired private PasswordEncoder passwordEncoder;
 
-            Rol adminRole = rolesRepository.findByName("ADMIN");
-            if (adminRole == null) {
-                adminRole = rolesRepository.save(new Rol("ADMIN", "#4f46e5", "Administrador del sistema"));
-            }
+    @Override
+    public void run(String... args) {
+        if (userRepository.existsById(ADMIN_USERNAME)) {
+            return;
+        }
 
-            User admin = new User();
-            admin.setUsername(ADMIN_USERNAME);
-            admin.setPassword(passwordEncoder.encode(ADMIN_PASSWORD));
-            admin.setRole(adminRole);
-            admin.setFirstName("Admin");
-            admin.setLastName("Inicial");
-            admin.setEmail("admin@local");
+        Rol adminRole = rolesRepository.findByName("ADMIN");
+        if (adminRole == null) {
+            adminRole = rolesRepository.save(new Rol("ADMIN", "#4f46e5", "Administrador del sistema"));
+        }
 
-            userRepository.save(admin);
-        };
+        User admin = new User();
+        admin.setUsername(ADMIN_USERNAME);
+        admin.setPassword(passwordEncoder.encode(ADMIN_PASSWORD));
+        admin.setRole(adminRole);
+        admin.setFirstName("Admin");
+        admin.setLastName("Inicial");
+        admin.setEmail("admin@local");
+
+        userRepository.save(admin);
     }
 }

@@ -10,6 +10,15 @@ public class VentaRegistroDto {
     private String usuarioUsername;
     private String observaciones;
     private String ordenDeServicioId;
+    /**
+     * Código de la sede donde se realiza la venta.
+     * El usuario solo puede usar sedes a las que tiene acceso asignado.
+     */
+    private String codigoSede;
+    /** Forma de pago: EFECTIVO, TARJETA, TRANSFERENCIA, CREDITO, MIXTO, OTRO */
+    private String formaPago;
+    /** Descuento global aplicado a la venta (en moneda). Default 0. */
+    private java.math.BigDecimal descuento;
     private List<VentaDetalleRegistroDto> detalles;
 
     public VentaRegistroDto() {}
@@ -28,6 +37,15 @@ public class VentaRegistroDto {
 
     public String getOrdenDeServicioId() { return ordenDeServicioId; }
     public void setOrdenDeServicioId(String ordenDeServicioId) { this.ordenDeServicioId = ordenDeServicioId; }
+
+    public String getCodigoSede() { return codigoSede; }
+    public void setCodigoSede(String codigoSede) { this.codigoSede = codigoSede; }
+
+    public String getFormaPago() { return formaPago; }
+    public void setFormaPago(String formaPago) { this.formaPago = formaPago; }
+
+    public java.math.BigDecimal getDescuento() { return descuento; }
+    public void setDescuento(java.math.BigDecimal descuento) { this.descuento = descuento; }
 
     public List<VentaDetalleRegistroDto> getDetalles() { return detalles; }
     public void setDetalles(List<VentaDetalleRegistroDto> detalles) { this.detalles = detalles; }

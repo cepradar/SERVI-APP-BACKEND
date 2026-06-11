@@ -7,16 +7,15 @@ import java.time.LocalDateTime;
 @Table(name = "role_permissions")
 public class RolePermission {
 
-    @EmbeddedId
-    private RolePermissionId id;
-
+    @Id
+    @Column(nullable = false, unique = true)
+    private String id;
+    
     @ManyToOne(fetch = FetchType.LAZY)
-    @MapsId("roleName")
     @JoinColumn(name = "role_name", nullable = false)
     private Rol role;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @MapsId("permissionId")
     @JoinColumn(name = "permission_id", nullable = false)
     private Permisos permission;
 
@@ -40,29 +39,24 @@ public class RolePermission {
         this.isActive = isActive;
         this.grantedBy = grantedBy;
         this.grantedAt = LocalDateTime.now();
-        this.id = new RolePermissionId(
-            role != null ? role.getName() : null,
-            permission != null ? permission.getId() : null
-        );
+        this.id = role != null && permission != null ? role.getName() + "_" + permission.getId() : null;
     }
 
     // ── Getters / Setters ────────────────────────────────────────────────────
 
-    public RolePermissionId getId() { return id; }
-    public void setId(RolePermissionId id) { this.id = id; }
+    public String getId() { return id; }
+    public void setId(String id) { this.id = id; }
 
     public Rol getRole() { return role; }
     public void setRole(Rol role) {
         this.role = role;
-        if (this.id == null) this.id = new RolePermissionId();
-        this.id.setRoleName(role != null ? role.getName() : null);
+        if (this.id == null) this.id = role != null && permission != null ? role.getName() + "_" + permission.getId() : null;
     }
 
     public Permisos getPermission() { return permission; }
     public void setPermission(Permisos permission) {
         this.permission = permission;
-        if (this.id == null) this.id = new RolePermissionId();
-        this.id.setPermissionId(permission != null ? permission.getId() : null);
+        if (this.id == null) this.id = role != null && permission != null ? role.getName() + "_" + permission.getId() : null;
     }
 
     public boolean isActive() { return isActive; }

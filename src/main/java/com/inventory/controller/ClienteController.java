@@ -34,26 +34,26 @@ public class ClienteController {
         return ResponseEntity.ok(clienteService.listarClientes());
     }
 
-    @GetMapping("/{documento}")
-    public ResponseEntity<List<ClienteDto>> buscarClientesPorDocumento(@PathVariable String documento) {
-        return ResponseEntity.ok(clienteService.buscarClientesPorDocumento(documento));
+    @GetMapping("/{nit}")
+    public ResponseEntity<List<ClienteDto>> buscarClientesPorNit(@PathVariable String nit) {
+        return ResponseEntity.ok(clienteService.buscarClientesPorNit(nit));
     }
 
-    @GetMapping("/{documento}/{tipoDocumentoId}")
-    public ResponseEntity<ClienteDto> buscarCliente(@PathVariable String documento, @PathVariable String tipoDocumentoId) {
-        Optional<ClienteDto> cliente = clienteService.buscarCliente(documento, tipoDocumentoId);
+    @GetMapping("/{nit}/{tipoDocumentoId}")
+    public ResponseEntity<ClienteDto> buscarCliente(@PathVariable String nit, @PathVariable String tipoDocumentoId) {
+        Optional<ClienteDto> cliente = clienteService.buscarCliente(nit, tipoDocumentoId);
         return cliente.map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    @PutMapping("/actualizar/{documento}/{tipoDocumentoId}")
-    public ResponseEntity<ClienteDto> actualizarCliente(@PathVariable String documento, @PathVariable String tipoDocumentoId, @RequestBody ClienteDto clienteDto) {
-        return ResponseEntity.ok(clienteService.actualizarCliente(documento, tipoDocumentoId, clienteDto));
+    @PutMapping("/actualizar/{nit}/{tipoDocumentoId}")
+    public ResponseEntity<ClienteDto> actualizarCliente(@PathVariable String nit, @PathVariable String tipoDocumentoId, @RequestBody ClienteDto clienteDto) {
+        return ResponseEntity.ok(clienteService.actualizarCliente(nit, tipoDocumentoId, clienteDto));
     }
 
-    @DeleteMapping("/eliminar/{documento}/{tipoDocumentoId}")
-    public ResponseEntity<Void> eliminarCliente(@PathVariable String documento, @PathVariable String tipoDocumentoId) {
-        clienteService.eliminarCliente(documento, tipoDocumentoId);
+    @DeleteMapping("/eliminar/{nit}/{tipoDocumentoId}")
+    public ResponseEntity<Void> eliminarCliente(@PathVariable String nit, @PathVariable String tipoDocumentoId) {
+        clienteService.eliminarCliente(nit, tipoDocumentoId);
         return ResponseEntity.ok().build();
     }
 }

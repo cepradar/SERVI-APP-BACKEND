@@ -6,20 +6,30 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 @Entity
 @Table(name = "orden_de_servicio")
 public class OrdenDeServicio {
     
     @Id
-    @Column(length = 6, nullable = false, unique = true)
+    @Column(length = 25, nullable = false, unique = true)
     private String id;
+
+    /**
+     * Sede donde se registró la orden de servicio. FK a la tabla sedes.
+     * El ID de la orden se genera con formato: O-{CODIGO_SEDE}-{CONSECUTIVO_6_DIGITOS}
+     * Ejemplo: O-BQ-000198
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "codigo_sede", referencedColumnName = "codigo_sede",
+                foreignKey = @ForeignKey(name = "fk_orden_servicio_sede"))
+    private Sede sede;
     
     @ManyToOne
-    @JoinColumns({
-        @JoinColumn(name = "cliente_id", nullable = false),
-        @JoinColumn(name = "cliente_tipo_documento", nullable = false)
-    })
+    @JoinColumn(name = "cliente_id", referencedColumnName = "id",
+                foreignKey = @ForeignKey(name = "fk_orden_cliente"))
     private Cliente cliente;
 
     @ManyToOne
@@ -54,8 +64,10 @@ public class OrdenDeServicio {
     @Column(precision = 10, scale = 2, name = "total_costo")
     private BigDecimal totalCosto = BigDecimal.ZERO;
     
-    @Column(nullable = false)
-    private String estado = "SOC"; // Código de tipo_evento (categoria ORDEN)
+    /** FK hacia la tabla ciudades (código DANE). Nullable para compatibilidad. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "estado", referencedColumnName = "id", nullable = false)
+    private CategoriaEvento estado; // SOC (Servicio en Curso), PENDIENTE, FINALIZADO, CANCELADO
     
     @Column(name = "fecha_ingreso", nullable = false, updatable = false)
     private LocalDateTime fechaIngreso;
@@ -82,11 +94,41 @@ public class OrdenDeServicio {
 
     @Column(columnDefinition = "TEXT")
     private String observaciones;
+
+    /**
+     * Prioridad de atención: ALTA, MEDIA (default), BAJA.
+     */
+    @Column(length = 10, nullable = false)
+    private String prioridad = "MEDIA";
+
+    /**
+     * Fecha y hora prometida de entrega al cliente.
+     */
+    @Column(name = "fecha_promesa_entrega", nullable = true)
+    private LocalDateTime fechaPromesaEntrega;
+
+    @Column(name = "fecha_reparado")
+    private LocalDateTime fechaReparado;
+
+    @Column(name = "fecha_entrega")
+    private LocalDateTime fechaEntrega;
+
+    @Column(nullable = false)
+    private boolean activo = true;
+
+    /**
+     * Detalle de servicios aplicados en esta orden.
+     * Cascada ALL + orphanRemoval para que los detalles se eliminen con la orden.
+     */
+    @OneToMany(mappedBy = "ordenDeServicio", cascade = CascadeType.ALL,
+               fetch = FetchType.LAZY, orphanRemoval = true)
+    @JsonIgnoreProperties("ordenDeServicio")
+    private List<OrdenDeServicioDetalle> detalle = new ArrayList<>();
     
     // Constructores
     public OrdenDeServicio() {
         this.fechaIngreso = LocalDateTime.now();
-        this.estado = "SOC";
+        this.estado = new CategoriaEvento("SOC"); //    SOC (Servicio en Curso), PENDIENTE, FINALIZADO, CANCELADO
         this.garantiaServicio = 30;
         this.costoServicio = BigDecimal.ZERO;
         this.costoRepuestos = BigDecimal.ZERO;
@@ -110,6 +152,14 @@ public class OrdenDeServicio {
     
     public void setId(String id) {
         this.id = id;
+    }
+
+    public Sede getSede() {
+        return sede;
+    }
+
+    public void setSede(Sede sede) {
+        this.sede = sede;
     }
     
     public Cliente getCliente() {
@@ -199,11 +249,11 @@ public class OrdenDeServicio {
                 .add(this.costoRepuestos != null ? this.costoRepuestos : BigDecimal.ZERO);
     }
     
-    public String getEstado() {
+    public CategoriaEvento getEstado() {
         return estado;
     }
     
-    public void setEstado(String estado) {
+    public void setEstado(CategoriaEvento estado) {
         this.estado = estado;
     }
     
@@ -270,11 +320,41 @@ public class OrdenDeServicio {
     public void setObservaciones(String observaciones) {
         this.observaciones = observaciones;
     }
+
+    public String getPrioridad() { return prioridad; }
+    public void setPrioridad(String prioridad) { this.prioridad = prioridad; }
+
+    public LocalDateTime getFechaPromesaEntrega() { return fechaPromesaEntrega; }
+    public void setFechaPromesaEntrega(LocalDateTime fechaPromesaEntrega) { this.fechaPromesaEntrega = fechaPromesaEntrega; }
+
+    public LocalDateTime getFechaReparado() { return fechaReparado; }
+    public void setFechaReparado(LocalDateTime fechaReparado) { this.fechaReparado = fechaReparado; }
+
+    public LocalDateTime getFechaEntrega() { return fechaEntrega; }
+    public void setFechaEntrega(LocalDateTime fechaEntrega) { this.fechaEntrega = fechaEntrega; }
+
+    public boolean isActivo() { return activo; }
+    public void setActivo(boolean activo) { this.activo = activo; }
+
+    public List<OrdenDeServicioDetalle> getDetalle() { return detalle; }
+    public void setDetalle(List<OrdenDeServicioDetalle> detalle) { this.detalle = detalle; }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        OrdenDeServicio that = (OrdenDeServicio) o;
+        return Objects.equals(id, that.id);
+    }
+
+    @Override
+    public int hashCode() { return Objects.hash(id); }
     
     @Override
     public String toString() {
         return "OrdenDeServicio{" +
                 "id=" + id +
+                ", sede=" + (sede != null ? sede.getCodigoSede() : "null") +
                 ", tipoServicio='" + tipoServicio + '\'' +
                 ", estado='" + estado + '\'' +
                 ", totalCosto=" + totalCosto +

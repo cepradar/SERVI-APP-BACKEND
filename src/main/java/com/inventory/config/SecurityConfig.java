@@ -85,6 +85,13 @@ public class SecurityConfig {
     .requestMatchers(HttpMethod.POST, "/api/auditoria/registrar").authenticated() // Permitir registro de eventos a usuarios autenticados
     .requestMatchers("/api/auditoria/**").hasAnyRole("ADMIN", "TECNICO")
     .requestMatchers("/api/ventas/**").hasAnyRole("ADMIN", "TECNICO")
+
+    // Sedes — gestión solo ADMIN, consulta de sedes propias para todos los autenticados
+    .requestMatchers(HttpMethod.GET, "/api/sedes/activas").authenticated()
+    .requestMatchers(HttpMethod.GET, "/api/sedes/mis-sedes").authenticated()
+    .requestMatchers(HttpMethod.GET, "/api/sedes/**").hasAnyRole("ADMIN", "TECNICO")
+    .requestMatchers("/api/sedes/**").hasRole("ADMIN")
+
     .requestMatchers("/api/permissions/me").authenticated()
     .requestMatchers("/api/permissions/role/**").hasRole("ADMIN")
     .requestMatchers("/api/permissions/**").hasRole("ADMIN")

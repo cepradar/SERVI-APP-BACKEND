@@ -20,7 +20,7 @@ import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 @Component
-@Order(20)
+@Order(50)
 public class ClientePruebaInitializer implements CommandLineRunner {
 
     @Autowired private ClienteRepository clienteRepository;
@@ -31,27 +31,31 @@ public class ClientePruebaInitializer implements CommandLineRunner {
     @Autowired private CategoriaElectrodomesticoRepository categoriaElectrodomesticoRepository;
     @Autowired private UserRepository userRepository;
 
-    private static final String CLIENTE_ID = "1000000001";
+    private static final String CLIENTE_ID = "12345";
     private static final String TIPO_DOCUMENTO = "CC";
     private static final String NUMERO_SERIE = "SN-PRUEBA-001";
 
     @Override
     public void run(String... args) throws Exception {
         // 1. Crear cliente de prueba si no existe
-        boolean clienteExiste = clienteRepository.existsByIdAndTipoDocumentoId(CLIENTE_ID, TIPO_DOCUMENTO);
+        boolean clienteExiste = clienteRepository.existsByNitAndTipoDocumentoId(CLIENTE_ID, TIPO_DOCUMENTO);
         if (!clienteExiste) {
             CategoryClient categoria = categoryClientRepository.findById("PART").orElse(null);
             DocumentoTipo tipoDoc = documentoTipoRepository.findById(TIPO_DOCUMENTO).orElse(null);
-
             if (categoria == null || tipoDoc == null) {
                 System.out.println("⚠️  ClientePruebaInitializer: categoría o tipo de documento no encontrado, omitiendo.");
                 return;
             }
 
-            Cliente cliente = new Cliente(
-                    CLIENTE_ID, null, categoria, tipoDoc,
-                    "Juan", "Prueba",
-                    "3000000000", "Calle Falsa 123", true);
+            Cliente cliente = new Cliente();
+            cliente.setNit(CLIENTE_ID);
+            cliente.setCategory(categoria);
+            cliente.setTipoDocumento(tipoDoc);
+            cliente.setNombre("Juan");
+            cliente.setApellido("Prueba");
+            cliente.setTelefono("3000000000");
+            cliente.setDireccion("Calle Falsa 123");
+            cliente.setActivo(true);
             clienteRepository.save(cliente);
             System.out.println("✅ Cliente de prueba creado: " + CLIENTE_ID);
         }
@@ -59,7 +63,7 @@ public class ClientePruebaInitializer implements CommandLineRunner {
         // 2. Crear electrodoméstico de prueba asociado al cliente si no existe
         boolean electroExiste = clienteElectrodomesticoRepository.findByNumeroSerie(NUMERO_SERIE).isPresent();
         if (!electroExiste) {
-            Cliente cliente = clienteRepository.findByIdAndTipoDocumentoId(CLIENTE_ID, TIPO_DOCUMENTO).orElse(null);
+            Cliente cliente = clienteRepository.findByNitAndTipoDocumentoId(CLIENTE_ID, TIPO_DOCUMENTO).orElse(null);
             User admin = userRepository.findById("ADMIN").orElse(null);
 
             if (cliente == null || admin == null) {
@@ -70,7 +74,7 @@ public class ClientePruebaInitializer implements CommandLineRunner {
             MarcaElectrodomestico marca = marcaElectrodomesticoRepository.findByNombre("Samsung").orElse(null);
             CategoriaElectrodomestico catElectro = categoriaElectrodomesticoRepository.findByNombre("Televisor").orElse(null);
 
-            ClienteElectrodomestico electrodomestico = new ClienteElectrodomestico(cliente, NUMERO_SERIE, admin);
+            ClienteElectrodomestico electrodomestico = new ClienteElectrodomestico(cliente, NUMERO_SERIE);
             electrodomestico.setElectrodomesticoTipo("Televisor");
             electrodomestico.setElectrodomesticoModelo("Smart TV 55\"");
             electrodomestico.setColorOFinish("Negro");

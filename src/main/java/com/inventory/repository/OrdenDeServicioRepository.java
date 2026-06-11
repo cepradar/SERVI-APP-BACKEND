@@ -15,16 +15,16 @@ public interface OrdenDeServicioRepository extends JpaRepository<OrdenDeServicio
     @Query(value = "SELECT id FROM orden_de_servicio ORDER BY id DESC LIMIT 1", nativeQuery = true)
     String findUltimoId();
     
-    @Query("SELECT s FROM OrdenDeServicio s WHERE s.cliente.id = :clienteId ORDER BY s.fechaIngreso DESC")
-    List<OrdenDeServicio> findByClienteId(String clienteId);
+    @Query("SELECT s FROM OrdenDeServicio s WHERE s.cliente.nit = :nit ORDER BY s.fechaIngreso DESC")
+    List<OrdenDeServicio> findByClienteId(@Param("nit") String nit);
 
-    @Query("SELECT s FROM OrdenDeServicio s WHERE s.cliente.id = :clienteId AND s.cliente.tipoDocumentoId = :clienteTipoDocumentoId ORDER BY s.fechaIngreso DESC")
-    List<OrdenDeServicio> findByClienteIdAndTipoDocumentoId(String clienteId, String clienteTipoDocumentoId);
+    @Query("SELECT s FROM OrdenDeServicio s WHERE s.cliente.nit = :nit AND s.cliente.tipoDocumento.id = :tipoDocumentoId ORDER BY s.fechaIngreso DESC")
+    List<OrdenDeServicio> findByClienteIdAndTipoDocumentoId(@Param("nit") String nit, @Param("tipoDocumentoId") String tipoDocumentoId);
     
     @Query("SELECT s FROM OrdenDeServicio s WHERE s.clienteElectrodomestico.id = :clienteElectrodomesticoId ORDER BY s.fechaIngreso DESC")
     List<OrdenDeServicio> findByClienteElectrodomesticoId(Long clienteElectrodomesticoId);
     
-    @Query("SELECT s FROM OrdenDeServicio s WHERE s.estado = :estado ORDER BY s.fechaIngreso DESC")
+    @Query("SELECT s FROM OrdenDeServicio s WHERE s.estado.nombre = :estado ORDER BY s.fechaIngreso DESC")
     List<OrdenDeServicio> findByEstado(String estado);
     
     @Query("SELECT s FROM OrdenDeServicio s WHERE s.tipoServicio = :tipoServicio ORDER BY s.fechaIngreso DESC")
@@ -36,17 +36,17 @@ public interface OrdenDeServicioRepository extends JpaRepository<OrdenDeServicio
     @Query("SELECT s FROM OrdenDeServicio s WHERE s.fechaIngreso >= :fechaInicio AND s.fechaIngreso <= :fechaFin ORDER BY s.fechaIngreso DESC")
     List<OrdenDeServicio> findByFechaIngresoRango(java.time.LocalDateTime fechaInicio, java.time.LocalDateTime fechaFin);
     
-    @Query("SELECT s FROM OrdenDeServicio s WHERE s.estado != 'SOENT' AND s.estado != 'SOCAN' ORDER BY s.fechaIngreso ASC")
+    @Query("SELECT s FROM OrdenDeServicio s WHERE s.estado.nombre != 'SOENT' AND s.estado.nombre != 'SOCAN' ORDER BY s.fechaIngreso ASC")
     List<OrdenDeServicio> findServiciosPendientes();
     
     @Query("SELECT s FROM OrdenDeServicio s WHERE s.vencimientoGarantia IS NOT NULL AND s.vencimientoGarantia >= :hoy AND s.vencimientoGarantia <= :proximosDias ORDER BY s.vencimientoGarantia ASC")
     List<OrdenDeServicio> findGarantiasPorVencer(LocalDate hoy, LocalDate proximosDias);
     
-    @Query("SELECT s FROM OrdenDeServicio s WHERE s.cliente.id = :clienteId AND s.estado = :estado ORDER BY s.fechaIngreso DESC")
-    List<OrdenDeServicio> findByClienteIdAndEstado(String clienteId, String estado);
+    @Query("SELECT s FROM OrdenDeServicio s WHERE s.cliente.nit = :nit AND s.estado.nombre = :estado ORDER BY s.fechaIngreso DESC")
+    List<OrdenDeServicio> findByClienteIdAndEstado(@Param("nit") String nit, @Param("estado") String estado);
 
-    @Query("SELECT s FROM OrdenDeServicio s WHERE s.cliente.id = :clienteId AND s.cliente.tipoDocumentoId = :clienteTipoDocumentoId AND s.estado = :estado ORDER BY s.fechaIngreso DESC")
-    List<OrdenDeServicio> findByClienteIdAndTipoDocumentoIdAndEstado(String clienteId, String clienteTipoDocumentoId, String estado);
+    @Query("SELECT s FROM OrdenDeServicio s WHERE s.cliente.nit = :nit AND s.cliente.tipoDocumento.id = :tipoDocumentoId AND s.estado.nombre = :estado ORDER BY s.fechaIngreso DESC")
+    List<OrdenDeServicio> findByClienteIdAndTipoDocumentoIdAndEstado(@Param("nit") String nit, @Param("tipoDocumentoId") String tipoDocumentoId, @Param("estado") String estado);
 
     /**
      * Regla 2: devuelve las órdenes cuyo estado corresponde al TipoEvento con
@@ -54,7 +54,7 @@ public interface OrdenDeServicioRepository extends JpaRepository<OrdenDeServicio
      * ese tipo_evento en la base de datos.
      */
     @Query("SELECT s FROM OrdenDeServicio s " +
-           "WHERE s.estado IN (SELECT te.id FROM TipoEvento te WHERE te.nombre = 'ORDEN_SERVICIO_CREADA') " +
+           "WHERE s.estado IN (SELECT te.categoria FROM Evento te WHERE te.nombre = 'ORDEN_SERVICIO_CREADA') " +
            "ORDER BY s.fechaIngreso DESC")
     List<OrdenDeServicio> findOrdenesParaAsignar();
 
@@ -72,7 +72,7 @@ public interface OrdenDeServicioRepository extends JpaRepository<OrdenDeServicio
      * Usa subquery sobre tipo_evento.nombre para ser robusto ante distintos códigos en BD.
      */
     @Query("SELECT s FROM OrdenDeServicio s " +
-           "WHERE s.estado IN (SELECT te.id FROM TipoEvento te " +
+           "WHERE s.estado IN (SELECT te.categoria FROM Evento te " +
            "  WHERE te.nombre IN ('ORDEN_SERVICIO_LISTA', 'ORDEN_SERVICIO_REPARADA')) " +
            "ORDER BY s.fechaIngreso DESC")
     List<OrdenDeServicio> findOrdenesParaEntregar();

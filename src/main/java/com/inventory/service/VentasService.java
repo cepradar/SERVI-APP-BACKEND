@@ -6,18 +6,23 @@ import com.inventory.dto.VentaDetalleRegistroDto;
 import com.inventory.dto.VentaRegistroDto;
 import com.inventory.model.Cliente;
 import com.inventory.model.Product;
+import com.inventory.model.Sede;
 import com.inventory.model.Servicio;
 import com.inventory.model.User;
 import com.inventory.model.Venta;
 import com.inventory.model.VentaDetalle;
 import com.inventory.model.OrdenDeServicio;
 import com.inventory.repository.ClienteRepository;
+import com.inventory.repository.SedeRepository;
+import com.inventory.repository.UsuarioSedeRepository;
 import com.inventory.repository.VentaRepository;
 import com.inventory.repository.VentaDetalleRepository;
 import com.inventory.repository.ProductRepository;
 import com.inventory.repository.ServicioRepository;
 import com.inventory.repository.UserRepository;
 import com.inventory.repository.OrdenDeServicioRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,6 +38,8 @@ import java.util.stream.Collectors;
 @Transactional
 public class VentasService {
 
+    private static final Logger log = LoggerFactory.getLogger(VentasService.class);
+
     @Autowired private VentaRepository ventaRepository;
     @Autowired private ProductRepository productRepository;
     @Autowired private ServicioRepository servicioRepository;
@@ -41,6 +48,8 @@ public class VentasService {
     @Autowired private AuditoriaService auditoriaService;
     @Autowired private VentaDetalleRepository ventaDetalleRepository;
     @Autowired private OrdenDeServicioRepository ordenDeServicioRepository;
+    @Autowired private SedeRepository sedeRepository;
+    @Autowired private UsuarioSedeRepository usuarioSedeRepository;
 
     /**
      * Valida que el técnico autenticado tenga la orden asignada antes de registrar una venta.
@@ -56,45 +65,89 @@ public class VentasService {
     }
 
     /**
-     * Registra una nueva venta.
-     * El cliente se resuelve por FK compuesta (clienteId + clienteTipoDocumento).
+     * Registra una nueva venta con ID generado por sede.
+     *
+     * Flujo thread-safe:
+     * 1. Valida que el usuario tenga acceso a la sede indicada.
+     * 2. Obtiene lock pesimista sobre la sede para leer/incrementar el consecutivo.
+     * 3. Genera el código de venta: V-{CODIGO_SEDE}-{CONSECUTIVO_6_DIGITOS}
+     * 4. Incrementa y persiste el consecutivo dentro de la misma transacción.
+     * 5. Crea y guarda la venta con los detalles.
      */
     public VentaDto registrarVenta(VentaRegistroDto registroDto) {
-        // Resolver usuario desde JWT
-        User usuario = userRepository.findById(
-                Objects.requireNonNull(registroDto.getUsuarioUsername(), "usuarioUsername"))
-            .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+        String codigoSede = Objects.requireNonNull(registroDto.getCodigoSede(),
+            "codigoSede es obligatorio para registrar una venta").trim().toUpperCase();
+        String username = Objects.requireNonNull(registroDto.getUsuarioUsername(), "usuarioUsername");
 
-        // Resolver cliente por FK compuesta
-        String clienteId  = Objects.requireNonNull(registroDto.getClienteId(), "clienteId");
-        String tipoDoc    = Objects.requireNonNull(registroDto.getClienteTipoDocumento(), "clienteTipoDocumento");
-        Cliente cliente   = clienteRepository.findByIdAndTipoDocumentoId(clienteId, tipoDoc)
-            .orElseThrow(() -> new RuntimeException(
-                "Cliente no encontrado: id=" + clienteId + ", tipo=" + tipoDoc));
+        log.info("Iniciando registro de venta — usuario: {}, sede: {}", username, codigoSede);
+
+        // ── 1. Validar acceso del usuario a la sede ──────────────────────────
+        boolean tieneAcceso = usuarioSedeRepository.existsByUsuarioUsernameAndCodigoSede(username, codigoSede);
+        if (!tieneAcceso) {
+            log.warn("Acceso denegado: usuario '{}' no tiene acceso a la sede '{}'", username, codigoSede);
+            throw new org.springframework.security.access.AccessDeniedException(
+                "No tienes acceso para registrar ventas en la sede: " + codigoSede);
+        }
+
+        // ── 2. Resolver entidades ─────────────────────────────────────────────
+        User usuario = userRepository.findById(username)
+            .orElseThrow(() -> new RuntimeException("Usuario no encontrado: " + username));
+
+        String clienteId     = Objects.requireNonNull(registroDto.getClienteId(), "clienteId");
+        String tipoDoc        = registroDto.getClienteTipoDocumento();
+        Cliente cliente;
+        if (tipoDoc != null && !tipoDoc.isBlank()) {
+            cliente = clienteRepository.findByNitAndTipoDocumentoId(clienteId, tipoDoc)
+                .orElseThrow(() -> new RuntimeException(
+                    "Cliente no encontrado: nit=" + clienteId + ", tipo=" + tipoDoc));
+        } else {
+            cliente = clienteRepository.findByNit(clienteId).stream().findFirst()
+                .orElseThrow(() -> new RuntimeException(
+                    "Cliente no encontrado: nit=" + clienteId));
+        }
 
         if (registroDto.getDetalles() == null || registroDto.getDetalles().isEmpty()) {
             throw new RuntimeException("La venta debe incluir al menos un detalle");
         }
 
-        // Construir venta base
+        // ── 3. Obtener sede con LOCK pesimista e incrementar consecutivo ─────
+        Sede sede = sedeRepository.findByCodigoSedeParaActualizacion(codigoSede)
+            .orElseThrow(() -> new RuntimeException("Sede no encontrada: " + codigoSede));
+
+        if (!sede.isActivo()) {
+            throw new IllegalStateException("La sede '" + codigoSede + "' está inactiva");
+        }
+
+        int consecutivo = sede.getConsecutivoVentas();
+        String ventaId = String.format("V-%s-%06d", codigoSede, consecutivo);
+        sede.setConsecutivoVentas(consecutivo + 1);
+        sedeRepository.save(sede);
+
+        log.info("Consecutivo venta asignado: {} (próximo: {})", ventaId, consecutivo + 1);
+
+        // ── 4. Construir y guardar la venta ────────────────────────────────────
         Venta venta = new Venta();
+        venta.setId(ventaId);
+        venta.setSede(sede);
         venta.setCliente(cliente);
         venta.setUsuario(usuario);
         venta.setFecha(LocalDateTime.now());
         venta.setObservaciones(registroDto.getObservaciones());
         venta.setOrdenDeServicioId(registroDto.getOrdenDeServicioId());
+        venta.setEstado("PAGADA");
+        if (registroDto.getFormaPago() != null) venta.setFormaPago(registroDto.getFormaPago());
+        if (registroDto.getDescuento() != null) venta.setDescuento(registroDto.getDescuento());
+        else venta.setDescuento(java.math.BigDecimal.ZERO);
 
-        // Guardar para obtener ID antes de crear detalles
         Venta ventaGuardada = ventaRepository.save(venta);
 
-        // Crear detalles — soporta PRODUCTOS (con descuento de stock) y SERVICIOS (sin inventario)
+        // ── 5. Crear detalles ────────────────────────────────────────────────
         List<VentaDetalle> detalles = new java.util.ArrayList<>();
 
         for (VentaDetalleRegistroDto detalleDto : registroDto.getDetalles()) {
             String tipoItem = detalleDto.getTipoItem(); // PRODUCTO | SERVICIO
 
             if ("SERVICIO".equalsIgnoreCase(tipoItem)) {
-                // ── Línea de SERVICIO técnico ─────────────────────────────────
                 if (detalleDto.getServicioId() == null) {
                     throw new RuntimeException("servicioId es requerido para ítems de tipo SERVICIO");
                 }
@@ -104,14 +157,10 @@ public class VentasService {
                 if (!servicio.isActivo()) {
                     throw new RuntimeException("El servicio '" + servicio.getNombre() + "' no está activo");
                 }
-
-                VentaDetalle detalle = new VentaDetalle(
-                    ventaGuardada, servicio, detalleDto.getCantidad(), detalleDto.getPrecioUnitario());
-                detalles.add(detalle);
-                // Los servicios NO descontan inventario ni generan auditoría de stock.
+                detalles.add(new VentaDetalle(ventaGuardada, servicio,
+                    detalleDto.getCantidad(), detalleDto.getPrecioUnitario()));
 
             } else {
-                // ── Línea de PRODUCTO físico (comportamiento original) ────────
                 if (detalleDto.getProductId() == null) {
                     throw new RuntimeException("productId es requerido para ítems de tipo PRODUCTO");
                 }
@@ -120,30 +169,24 @@ public class VentasService {
                         "Producto no encontrado: " + detalleDto.getProductId()));
 
                 if (producto.getQuantity() < detalleDto.getCantidad()) {
-                    throw new RuntimeException("Cantidad insuficiente para producto '"
-                        + producto.getName() + "'. Disponible: " + producto.getQuantity());
+                    throw new RuntimeException("Cantidad insuficiente para '" + producto.getName()
+                        + "'. Disponible: " + producto.getQuantity());
                 }
 
-                VentaDetalle detalle = new VentaDetalle(
-                    ventaGuardada, producto, detalleDto.getCantidad(), detalleDto.getPrecioUnitario());
-                detalles.add(detalle);
+                detalles.add(new VentaDetalle(ventaGuardada, producto,
+                    detalleDto.getCantidad(), detalleDto.getPrecioUnitario()));
 
-                // Descontar inventario
                 int cantidadInicial = producto.getQuantity();
                 producto.setQuantity(producto.getQuantity() - detalleDto.getCantidad());
                 productRepository.save(producto);
 
-                // Auditoría de movimiento de inventario
                 auditoriaService.registrarMovimiento(
-                    producto.getId(),
-                    cantidadInicial,
-                    producto.getQuantity(),
-                    detalleDto.getPrecioUnitario(),
-                    detalleDto.getPrecioUnitario(),
+                    producto.getId(), cantidadInicial, producto.getQuantity(),
+                    detalleDto.getPrecioUnitario(), detalleDto.getPrecioUnitario(),
                     "VC",
-                    "Venta a cliente: " + cliente.getNombre() + " " + cliente.getApellido(),
-                    registroDto.getUsuarioUsername(),
-                    "VENTA-" + ventaGuardada.getId()
+                    "Venta " + ventaId + " — cliente: " + cliente.getNombre() + " " + cliente.getApellido(),
+                    username,
+                    ventaId
                 );
             }
         }
@@ -151,6 +194,7 @@ public class VentasService {
         ventaGuardada.setDetalles(detalles);
         ventaRepository.save(ventaGuardada);
 
+        log.info("Venta registrada exitosamente: {} en sede {}", ventaId, codigoSede);
         return convertirADto(ventaGuardada);
     }
 
@@ -199,7 +243,7 @@ public class VentasService {
     }
 
     /** Obtiene una venta por ID. */
-    public VentaDto obtenerVentaPorId(Long ventaId) {
+    public VentaDto obtenerVentaPorId(String ventaId) {
         return ventaRepository.findById(Objects.requireNonNull(ventaId, "ventaId"))
                 .map(this::convertirADto)
                 .orElseThrow(() -> new RuntimeException("Venta no encontrada"));
@@ -227,7 +271,6 @@ public class VentasService {
                 .map(d -> {
                     String tipoItem = d.getTipoItem() != null ? d.getTipoItem() : "PRODUCTO";
                     if ("SERVICIO".equals(tipoItem) && d.getServicio() != null) {
-                        // Línea de servicio técnico
                         return new VentaDetalleDto(
                             null, null,
                             d.getServicio().getId(),
@@ -235,7 +278,6 @@ public class VentasService {
                             "SERVICIO",
                             d.getCantidad(), d.getPrecioUnitario(), d.getSubtotal());
                     } else if (d.getProduct() != null) {
-                        // Línea de producto físico
                         return new VentaDetalleDto(
                             d.getProduct().getId(),
                             d.getProduct().getName(),
@@ -243,7 +285,6 @@ public class VentasService {
                             "PRODUCTO",
                             d.getCantidad(), d.getPrecioUnitario(), d.getSubtotal());
                     } else {
-                        // Datos inconsistentes — devolver vacío con lo que haya
                         return new VentaDetalleDto(null, "(ítem desconocido)",
                             null, null, tipoItem,
                             d.getCantidad(), d.getPrecioUnitario(), d.getSubtotal());
@@ -253,10 +294,9 @@ public class VentasService {
             : java.util.Collections.emptyList();
 
         Cliente c = venta.getCliente();
-        String nombreComprador  = c != null
-            ? (c.getNombre() + " " + c.getApellido()).trim() : "";
-        String telefonoComprador = c != null ? (c.getTelefono() != null ? c.getTelefono() : "") : "";
-        String emailComprador    = c != null ? (c.getEmail()    != null ? c.getEmail()    : "") : "";
+        String nombreComprador   = c != null ? (c.getNombre() + " " + c.getApellido()).trim() : "";
+        String telefonoComprador = c != null && c.getTelefono() != null ? c.getTelefono() : "";
+        String emailComprador    = c != null && c.getEmail()    != null ? c.getEmail()    : "";
 
         VentaDto dto = new VentaDto(
             venta.getId(),
@@ -265,17 +305,24 @@ public class VentasService {
             telefonoComprador,
             emailComprador,
             venta.getUsuario().getUsername(),
-            venta.getUsuario().getFirstName() + " " + venta.getUsuario().getLastName(),
+            (venta.getUsuario().getFirstName() != null ? venta.getUsuario().getFirstName() : "")
+                + " " + (venta.getUsuario().getLastName() != null ? venta.getUsuario().getLastName() : ""),
             venta.getFecha(),
             venta.getObservaciones(),
             detallesDto
         );
         dto.setOrdenDeServicioId(venta.getOrdenDeServicioId());
+        dto.setEstado(venta.getEstado());
+        dto.setFormaPago(venta.getFormaPago());
+        dto.setDescuento(venta.getDescuento());
         if (c != null) {
-            dto.setClienteId(c.getId());
+            dto.setClienteId(String.valueOf(c.getId()));
             dto.setClienteTipoDocumento(c.getTipoDocumentoId());
+        }
+        if (venta.getSede() != null) {
+            dto.setCodigoSede(venta.getSede().getCodigoSede());
+            dto.setNombreSede(venta.getSede().getNombre());
         }
         return dto;
     }
 }
-

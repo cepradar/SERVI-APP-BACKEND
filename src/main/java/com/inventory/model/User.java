@@ -6,6 +6,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 
 import jakarta.persistence.*;
 
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.Collections;
 
@@ -20,16 +21,20 @@ public class User implements UserDetails {
     private String password;
 
     @Column(nullable = true)
-    private String email;
-
-    @Column(nullable = true)
-    private String telefono;
-
-    @Column(nullable = true)
     private String firstName;
 
     @Column(nullable = true)
     private String lastName;
+
+    /** Número de identificación del empleado (cédula, NIT, etc.) */
+    @Column(length = 30, nullable = true)
+    private String cedula;
+
+    @Column(nullable = true)
+    private String email;
+
+    @Column(nullable = true)
+    private String telefono;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "roles_name", nullable = false)
@@ -38,6 +43,25 @@ public class User implements UserDetails {
     @Basic(fetch = FetchType.LAZY)
     @Column(nullable = true) // El campo es opcional
     private byte[] profilePicture;
+
+    /** Indica si el usuario puede iniciar sesión. false = cuenta suspendida. */
+    @Column(nullable = false, columnDefinition = "boolean default true")
+    private boolean activo = true;
+
+    /** Indica si la cuenta está bloqueada (p.ej. por intentos fallidos). */
+    @Column(name = "cuenta_bloqueada", nullable = false, columnDefinition = "boolean default false")
+    private boolean cuentaBloqueada = false;
+
+    @Column(name = "fecha_creacion", nullable = true, updatable = false)
+    private LocalDateTime fechaCreacion;
+
+    @Column(name = "ultimo_login", nullable = true)
+    private LocalDateTime ultimoLogin;
+
+    @PrePersist
+    protected void onCreate() {
+        if (this.fechaCreacion == null) this.fechaCreacion = LocalDateTime.now();
+    }
 
     // Constructor
     public User() {
@@ -122,6 +146,21 @@ public class User implements UserDetails {
         this.lastName = lastName;
     }
 
+    public String getCedula() { return cedula; }
+    public void setCedula(String cedula) { this.cedula = cedula; }
+
+    public boolean isActivo() { return activo; }
+    public void setActivo(boolean activo) { this.activo = activo; }
+
+    public boolean isCuentaBloqueada() { return cuentaBloqueada; }
+    public void setCuentaBloqueada(boolean cuentaBloqueada) { this.cuentaBloqueada = cuentaBloqueada; }
+
+    public LocalDateTime getFechaCreacion() { return fechaCreacion; }
+    public void setFechaCreacion(LocalDateTime fechaCreacion) { this.fechaCreacion = fechaCreacion; }
+
+    public LocalDateTime getUltimoLogin() { return ultimoLogin; }
+    public void setUltimoLogin(LocalDateTime ultimoLogin) { this.ultimoLogin = ultimoLogin; }
+
     @Override
     public String toString() {
         return "Usuarios [username=" + username + ", role=" + role + "]";
@@ -145,16 +184,16 @@ public class User implements UserDetails {
 
     @Override
     public boolean isAccountNonLocked() {
-        return true; // Implementa tu lógica de bloqueo de cuenta si es necesario
+        return !cuentaBloqueada;
     }
 
     @Override
     public boolean isCredentialsNonExpired() {
-        return true; // Implementa tu lógica de expiración de credenciales si es necesario
+        return true;
     }
 
     @Override
     public boolean isEnabled() {
-        return true; // Implementa tu lógica de habilitación de usuario si es necesario
+        return activo;
     }
 }

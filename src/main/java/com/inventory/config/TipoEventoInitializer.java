@@ -1,28 +1,32 @@
 package com.inventory.config;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
+import org.springframework.stereotype.Component;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.inventory.model.CategoriaTipoEvento;
-import com.inventory.model.TipoEvento;
-import com.inventory.repository.CategoriaTipoEventoRepository;
-import com.inventory.repository.TipoEventoRepository;
+import com.inventory.model.CategoriaEvento;
+import com.inventory.model.Evento;
+import com.inventory.repository.CategoriaEventoRepository;
+import com.inventory.repository.EventoRepository;
 
-@Configuration
-public class TipoEventoInitializer {
+@Component
+@Order(30)
+public class TipoEventoInitializer implements CommandLineRunner {
     private static final Logger logger = LoggerFactory.getLogger(TipoEventoInitializer.class);
 
-    @Bean
-    CommandLineRunner initTipoEventos(TipoEventoRepository eventoRepository, CategoriaTipoEventoRepository categoriaRepository) {
-        return args -> {
+    @Autowired private EventoRepository eventoRepository;
+    @Autowired private CategoriaEventoRepository categoriaRepository;
+
+    @Override
+    public void run(String... args) {
             logger.info("🚀 Inicializando categorías y tipos de eventos...");
 
-            CategoriaTipoEvento inventario = crearCategoriaSiNoExiste(categoriaRepository, "INVENTARIO");
-            CategoriaTipoEvento orden = crearCategoriaSiNoExiste(categoriaRepository, "ORDEN");
-            CategoriaTipoEvento venta = crearCategoriaSiNoExiste(categoriaRepository, "VENTA");
+            CategoriaEvento inventario = crearCategoriaSiNoExiste(categoriaRepository, "INVENTARIO");
+            CategoriaEvento orden = crearCategoriaSiNoExiste(categoriaRepository, "ORDEN");
+            CategoriaEvento venta = crearCategoriaSiNoExiste(categoriaRepository, "VENTA");
             
             // ========== EVENTOS DE COMPRA Y VENTA ==========
             crearEventoSiNoExiste(eventoRepository, "C", "COMPRA", venta);
@@ -68,12 +72,11 @@ public class TipoEventoInitializer {
             crearEventoSiNoExiste(eventoRepository, "SIS", "SISTEMA", orden);
             
             logger.info("✅ Inicialización de categorías y tipos de eventos completada");
-        };
     }
 
-    private CategoriaTipoEvento crearCategoriaSiNoExiste(CategoriaTipoEventoRepository categoriaRepository, String nombre) {
+    private CategoriaEvento crearCategoriaSiNoExiste(CategoriaEventoRepository categoriaRepository, String nombre) {
         return categoriaRepository.findByNombre(nombre)
-            .orElseGet(() -> categoriaRepository.save(new CategoriaTipoEvento(nombre)));
+            .orElseGet(() -> categoriaRepository.save(new CategoriaEvento(nombre)));
     }
 
     /**
@@ -83,12 +86,12 @@ public class TipoEventoInitializer {
      * @param nombre nombre descriptivo del evento
      * @param categoria categoría del evento (INVENTARIO, ORDEN, VENTA)
      */
-    private void crearEventoSiNoExiste(TipoEventoRepository eventoRepository, String codigo, String nombre, CategoriaTipoEvento categoria) {
+    private void crearEventoSiNoExiste(EventoRepository eventoRepository, String codigo, String nombre, CategoriaEvento categoria) {
         try {
             // Buscar por código (ID)
-            TipoEvento evento = eventoRepository.findById(codigo).orElse(null);
+            Evento evento = eventoRepository.findById(codigo).orElse(null);
             if (evento == null) {
-                TipoEvento nuevoEvento = new TipoEvento(codigo, nombre, categoria);
+                Evento nuevoEvento = new Evento(codigo, nombre, categoria);
                 eventoRepository.save(nuevoEvento);
                 logger.debug("✅ Tipo de evento creado: {} - {} [{}]", codigo, nombre, categoria.getNombre());
             } else {

@@ -257,7 +257,7 @@ public class UsuarioService implements UserDetailsService {
      */
     @Transactional
     public User registerClient(String email, String password, String firstName, String lastName,
-                               String telefono, String documento, String tipoDocumentoId,
+                               String telefono, String nit, String tipoDocumentoId,
                                String direccion) {
         // ── 1. Validar unicidad de email/username ────────────────────────────
         if (userRepository.findByUsername(email).isPresent()) {
@@ -266,7 +266,7 @@ public class UsuarioService implements UserDetailsService {
 
         // ── 2. Validar unicidad del documento en la tabla clientes ───────────
         String tdId = (tipoDocumentoId != null && !tipoDocumentoId.isBlank()) ? tipoDocumentoId.toUpperCase() : "CC";
-        if (clienteRepository.existsByIdAndTipoDocumentoId(documento, tdId)) {
+        if (clienteRepository.existsByNitAndTipoDocumentoId(nit, tdId)) {
             throw new IllegalArgumentException("Ya existe un cliente registrado con ese número de documento");
         }
 
@@ -294,9 +294,15 @@ public class UsuarioService implements UserDetailsService {
         userRepository.save(newUser);
 
         // ── 5. Crear cliente (tabla clientes) ────────────────────────────────
-        Cliente nuevoCliente = new Cliente(
-                documento, null, categoriaParticular, tipoDoc,
-                firstName, lastName, telefono, direccion, true);
+        Cliente nuevoCliente = new Cliente();
+        nuevoCliente.setNit(nit);
+        nuevoCliente.setCategory(categoriaParticular);
+        nuevoCliente.setTipoDocumento(tipoDoc);
+        nuevoCliente.setNombre(firstName);
+        nuevoCliente.setApellido(lastName);
+        nuevoCliente.setTelefono(telefono);
+        nuevoCliente.setDireccion(direccion);
+        nuevoCliente.setActivo(true);
         nuevoCliente.setEmail(email);
         clienteRepository.save(nuevoCliente);
 

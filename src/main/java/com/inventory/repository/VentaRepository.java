@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Repository
-public interface VentaRepository extends JpaRepository<Venta, Long> {
+public interface VentaRepository extends JpaRepository<Venta, String> {
     
 
     

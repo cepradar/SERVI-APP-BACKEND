@@ -2,13 +2,13 @@ package com.inventory.service;
 
 import com.inventory.dto.AuditoriaDto;
 import com.inventory.model.Auditoria;
-import com.inventory.model.Product;
-import com.inventory.model.TipoEvento;
+import com.inventory.model.Evento;
 import com.inventory.model.User;
 import com.inventory.repository.AuditoriaRepository;
+import com.inventory.repository.EventoRepository;
 import com.inventory.repository.ProductRepository;
-import com.inventory.repository.TipoEventoRepository;
 import com.inventory.repository.UserRepository;
+import com.inventory.repository.VentaRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,230 +26,93 @@ import java.util.stream.Collectors;
 public class AuditoriaService {
     private static final Logger logger = LoggerFactory.getLogger(AuditoriaService.class);
 
-    @Autowired
-    private AuditoriaRepository auditoriaRepository;
+    @Autowired private AuditoriaRepository auditoriaRepository;
+    @Autowired private ProductRepository productRepository;
+    @Autowired private UserRepository userRepository;
+    @Autowired private VentaRepository ventaRepository;
+    @Autowired private EventoRepository eventoRepository;
 
-    @Autowired
-    private ProductRepository productRepository;
-
-    @Autowired
-    private UserRepository userRepository;
-
-    @Autowired
-    private TipoEventoRepository tipoEventoRepository;
-
-    /**
-     * Registra un nuevo evento de auditoría
-     * Mapea tipos desde frontend a IDs de tipo_evento:
-     * - INGRESO → ME (MOVIMIENTO_ENTRADA)
-     * - AJUSTE → MA (MOVIMIENTO_AJUSTE)
-     * - SALIDA → MS (MOVIMIENTO_SALIDA)
-     */
-    public AuditoriaDto registrarMovimiento(String productId, Integer cantidadInicial, Integer cantidadFinal,
-                                            BigDecimal precioInicial, BigDecimal precioFinal, String tipo,
-                                            String descripcion, String usuarioUsername, String referencia) {
-        // Mapear tipo del frontend a ID de tipo_evento
-        String tipoEventoId = mapearTipoEvento(tipo);
-        logger.info("🔍 Registrando auditoría - tipo entrada: '{}', tipo mapeado: '{}'", tipo, tipoEventoId);
-        
-        // Buscar tipo de evento
-        TipoEvento tipoEvento = tipoEventoRepository.findById(Objects.requireNonNull(tipoEventoId, "tipoEventoId"))
-                .orElseThrow(() -> {
-                    logger.error("❌ Tipo de evento NO ENCONTRADO en BD: '{}'", tipoEventoId);
-                    return new RuntimeException("Tipo de evento no encontrado: " + tipoEventoId);
-                });
-        
-        logger.info("✅ Tipo de evento encontrado: {} - {}", tipoEvento.getId(), tipoEvento.getNombre());
-        
-        // Buscar producto para capturar nombre (sin FK)
-        String safeProductId = Objects.requireNonNull(productId, "productId");
-        Product producto = productRepository.findById(safeProductId).orElse(null);
-        String productName;
-        if (producto != null) {
-            productName = producto.getName();
-        } else if (safeProductId.startsWith("CE-") || safeProductId.startsWith("OS-")) {
-            productName = "Orden de servicio";
-        } else {
-            productName = "[Producto eliminado]";
-        }
-        
-        User usuario = userRepository.findByUsernameIgnoreCase(Objects.requireNonNull(usuarioUsername, "usuarioUsername"))
+    public AuditoriaDto registrarMovimiento(String productId,
+                                            Integer cantidadInicial, Integer cantidadFinal,
+                                            BigDecimal precioInicial, BigDecimal precioFinal,
+                                            String tipo, String descripcion,
+                                            String usuarioUsername, String ventaId) {
+        String eventoId = mapearTipoEvento(tipo);
+        Evento evento = eventoRepository.findById(Objects.requireNonNull(eventoId))
+                .orElseThrow(() -> new RuntimeException("Evento no encontrado: " + eventoId));
+        User usuario = userRepository.findByUsernameIgnoreCase(
+                Objects.requireNonNull(usuarioUsername, "usuarioUsername"))
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
-        Integer cantidadInicialFinal = cantidadInicial != null ? cantidadInicial : cantidadFinal;
-        Integer cantidadFinalFinal = cantidadFinal != null ? cantidadFinal : cantidadInicialFinal;
-        BigDecimal precioInicialFinal = precioInicial != null ? precioInicial : BigDecimal.ZERO;
-        BigDecimal precioFinalFinal = precioFinal != null ? precioFinal : precioInicialFinal;
+        Auditoria auditoria = new Auditoria(evento, descripcion, usuario,
+                buildEstado(cantidadInicial, precioInicial),
+                buildEstado(cantidadFinal, precioFinal));
 
-        Auditoria auditoria = new Auditoria(
-            tipoEvento,
-            safeProductId,
-            productName,
-            cantidadInicialFinal,
-            cantidadFinalFinal,
-            precioInicialFinal,
-            precioFinalFinal,
-            descripcion,
-            usuario,
-            referencia
-        );
+        if (productId != null && !productId.startsWith("CE-") && !productId.startsWith("OS-"))
+            productRepository.findById(productId).ifPresent(auditoria::setProducto);
+
+        if (ventaId != null && !ventaId.isBlank())
+            ventaRepository.findById(ventaId).ifPresent(auditoria::setVenta);
+
         Auditoria guardada = auditoriaRepository.save(auditoria);
-        
-        logger.info("✅ Auditoría registrada con ID: {}, tipoEvento: {}", guardada.getId(), 
-                   guardada.getTipoEvento() != null ? guardada.getTipoEvento().getId() : "NULL");
-        
+        logger.info("Auditoria registrada ID: {}, evento: {}", guardada.getId(), guardada.getEvento().getId());
         return new AuditoriaDto(guardada);
     }
 
-    /**
-     * Mapea los tipos de eventos del frontend a los códigos de la tabla tipo_evento
-     */
+    private String buildEstado(Integer cantidad, BigDecimal precio) {
+        if (cantidad == null && precio == null) return null;
+        StringBuilder sb = new StringBuilder();
+        if (cantidad != null) sb.append("cantidad=").append(cantidad);
+        if (precio != null) { if (sb.length() > 0) sb.append(", "); sb.append("precio=").append(precio); }
+        return sb.toString();
+    }
+
     private String mapearTipoEvento(String tipo) {
-        if (tipo == null || tipo.trim().isEmpty()) {
-            logger.warn("⚠️ Tipo de evento vacío, usando MA por defecto");
-            return "MA";
-        }
-        
-        String tipoUpper = tipo.toUpperCase().trim();
-        
-        switch(tipoUpper) {
-            // Nuevos códigos desde frontend (PRIORITARIOS)
-            case "CP":
-                return "CP"; // CREACION_PRODUCTO
-            case "MA":
-                return "MA"; // MOVIMIENTO_AJUSTE
-            case "EP":
-                return "EP"; // ELIMINACION_PRODUCTO
-            case "V":
-                return "V"; // VENTA
-            case "VENTA":
-                return "V"; // VENTA
-            case "VC":
-                return "VC"; // VENTA_CREADA
-            case "SOC":
-            case "SOA":
-            case "SOE":
-            case "SOP":
-            case "SOD":
-            case "SOR":
-            case "SOT":
-            case "SOL":
-            case "SOENT":
-            case "SOCAN":
-            case "SOREC":
-                return tipoUpper; // EVENTOS DE ORDEN DE SERVICIO
-            // Códigos legados (compatibilidad hacia atrás)
-            case "INGRESO":
-                logger.info("ℹ️ Usando código legacy 'INGRESO', mapeando a 'ME'");
-                return "ME"; // MOVIMIENTO_ENTRADA
-            case "SALIDA":
-                logger.info("ℹ️ Usando código legacy 'SALIDA', mapeando a 'MS'");
-                return "MS"; // MOVIMIENTO_SALIDA
-            case "AJUSTE":
-                logger.info("ℹ️ Usando código legacy 'AJUSTE', mapeando a 'MA'");
-                return "MA"; // MOVIMIENTO_AJUSTE
-            case "ME":
-            case "MS":
-                // Ya son códigos válidos, pasarlos directamente
-                return tipoUpper;
-            default:
-                logger.warn("⚠️ Código de evento desconocido: '{}', usando MA por defecto", tipo);
-                return "MA"; // Fallback a MOVIMIENTO_AJUSTE
+        if (tipo == null || tipo.trim().isEmpty()) return "MA";
+        switch (tipo.toUpperCase().trim()) {
+            case "INGRESO": return "ME";
+            case "SALIDA":  return "MS";
+            case "AJUSTE":  return "MA";
+            case "VENTA":   return "V";
+            default:        return tipo.toUpperCase().trim();
         }
     }
 
-    /**
-     * Obtiene todos los eventos de auditoría ordenados por fecha descendente
-     */
     public List<AuditoriaDto> obtenerTodosMovimientos() {
-        logger.info("🔍 Obteniendo todos los movimientos de auditoría...");
-        List<Auditoria> auditorias = auditoriaRepository.findAllByOrderByFechaDesc();
-        logger.info("📊 Total de registros encontrados en BD: {}", auditorias.size());
-        
-        List<AuditoriaDto> dtos = auditorias.stream()
-                .map(auditoria -> {
-                    try {
-                        return new AuditoriaDto(auditoria);
-                    } catch (Exception e) {
-                        logger.error("❌ Error al convertir auditoría {} a DTO: {}", 
-                                   auditoria.getId(), e.getMessage(), e);
-                        return null;
-                    }
-                })
-                .filter(dto -> dto != null)
-                .collect(Collectors.toList());
-        
-        logger.info("✅ DTOs creados exitosamente: {}", dtos.size());
-        return dtos;
+        return auditoriaRepository.findAllByOrderByFechaDesc().stream().map(AuditoriaDto::new).collect(Collectors.toList());
     }
 
-    /**
-     * Obtiene eventos de un producto específico
-     */
     public List<AuditoriaDto> obtenerMovimientosProducto(String productId) {
-        return auditoriaRepository.findByProductId(productId).stream()
-                .map(AuditoriaDto::new)
-                .collect(Collectors.toList());
+        return auditoriaRepository.findByProductoId(productId).stream().map(AuditoriaDto::new).collect(Collectors.toList());
     }
 
-    /**
-     * Obtiene eventos de un usuario
-     */
     public List<AuditoriaDto> obtenerMovimientosUsuario(String username) {
-        return auditoriaRepository.findByUsuarioUsernameIgnoreCase(username).stream()
-                .map(AuditoriaDto::new)
-                .collect(Collectors.toList());
+        return auditoriaRepository.findByUsuarioUsernameIgnoreCase(username).stream().map(AuditoriaDto::new).collect(Collectors.toList());
     }
 
-    /**
-     * Obtiene eventos por tipo de evento específico
-     */
-    public List<AuditoriaDto> obtenerMovimientosPorTipo(String tipoEventoId) {
-        return auditoriaRepository.findByTipoEventoId(tipoEventoId).stream()
-                .map(AuditoriaDto::new)
-                .collect(Collectors.toList());
+    public List<AuditoriaDto> obtenerMovimientosPorTipo(String eventoId) {
+        return auditoriaRepository.findByEventoId(eventoId).stream().map(AuditoriaDto::new).collect(Collectors.toList());
     }
 
-    /**
-     * Obtiene eventos en un rango de fechas
-     */
     public List<AuditoriaDto> obtenerMovimientosEnRango(LocalDateTime fechaInicio, LocalDateTime fechaFin) {
-        return auditoriaRepository.findByFechaBetween(fechaInicio, fechaFin).stream()
-                .map(AuditoriaDto::new)
-                .collect(Collectors.toList());
+        return auditoriaRepository.findByFechaBetween(fechaInicio, fechaFin).stream().map(AuditoriaDto::new).collect(Collectors.toList());
     }
 
-    /**
-     * Obtiene eventos por categoría (INVENTARIO, VENTA, SERVICIO, GARANTIA, SISTEMA)
-     */
     public List<AuditoriaDto> obtenerMovimientosEnCategoria(String categoria) {
-        if (categoria == null || categoria.isBlank()) {
-            return List.of();
-        }
-
-        String categoriaNormalizada = categoria.toUpperCase();
-        if ("ORDEN".equals(categoriaNormalizada) || "ORDENES".equals(categoriaNormalizada)
-                || "SERVICIO".equals(categoriaNormalizada) || "SERVICIOS".equals(categoriaNormalizada)) {
+        if (categoria == null || categoria.isBlank()) return List.of();
+        String cat = categoria.toUpperCase();
+        if ("ORDEN".equals(cat) || "ORDENES".equals(cat) || "SERVICIO".equals(cat) || "SERVICIOS".equals(cat))
             return obtenerMovimientosOrdenes();
-        }
-
-        return auditoriaRepository.findByTipoEventoCategoria(categoria.toUpperCase()).stream()
-                .map(AuditoriaDto::new)
-                .collect(Collectors.toList());
+        return auditoriaRepository.findByEventoCategoria(cat).stream().map(AuditoriaDto::new).collect(Collectors.toList());
     }
 
     public List<AuditoriaDto> obtenerMovimientosOrdenes() {
-        return auditoriaRepository.findMovimientosOrdenes().stream()
-                .map(AuditoriaDto::new)
-                .collect(Collectors.toList());
+        return auditoriaRepository.findMovimientosOrdenes().stream().map(AuditoriaDto::new).collect(Collectors.toList());
     }
 
-    /**
-     * Obtiene un evento por ID
-     */
     public AuditoriaDto obtenerMovimientoPorId(Long auditoriaId) {
-        return auditoriaRepository.findById(Objects.requireNonNull(auditoriaId, "auditoriaId"))
+        return auditoriaRepository.findById(Objects.requireNonNull(auditoriaId))
                 .map(AuditoriaDto::new)
-                .orElseThrow(() -> new RuntimeException("Evento de auditoría no encontrado"));
+                .orElseThrow(() -> new RuntimeException("Auditoria no encontrada"));
     }
 }
