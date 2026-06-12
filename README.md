@@ -12,12 +12,13 @@ Provee autenticación JWT, control de acceso basado en roles (RBAC), gestión de
 2. [Configuración rápida](#configuración-rápida)
 3. [Variables de entorno](#variables-de-entorno)
 4. [Ejecución en desarrollo](#ejecución-en-desarrollo)
-5. [Ejecución con Docker](#ejecución-con-docker)
-6. [API Endpoints principales](#api-endpoints-principales)
-7. [Swagger UI](#swagger-ui)
-8. [Estructura del proyecto](#estructura-del-proyecto)
-9. [Base de datos](#base-de-datos)
-10. [Producción](#producción)
+5. [Instalación directa en servidor (sin Docker)](#instalación-directa-en-servidor-sin-docker)
+6. [Ejecución con Docker](#ejecución-con-docker)
+7. [API Endpoints principales](#api-endpoints-principales)
+8. [Swagger UI](#swagger-ui)
+9. [Estructura del proyecto](#estructura-del-proyecto)
+10. [Base de datos](#base-de-datos)
+11. [Producción](#producción)
 
 ---
 
@@ -85,6 +86,82 @@ java -jar target/inventory-backend-*.jar
 ```
 
 El servidor arranca en `http://localhost:8080`.
+
+---
+
+## Instalación directa en servidor (sin Docker)
+
+Estas instrucciones dejan el backend corriendo como servicio `systemd` en Debian/Ubuntu. La aplicación ya soporta esta modalidad con `.env` y un `jar` empaquetado.
+
+### 1. Instalar dependencias base
+
+```bash
+sudo apt update
+sudo apt install -y openjdk-17-jre-headless postgresql-client curl
+java -version
+```
+
+> Si PostgreSQL también vivirá en el mismo servidor, instala además `postgresql` y crea la base `SERVI`.
+
+### 2. Empaquetar la aplicación
+
+```bash
+./mvnw package -DskipTests
+```
+
+El artefacto generado queda en `target/` con nombre `inventory-backend-<version>.jar`.
+
+### 3. Crear estructura de despliegue
+
+```bash
+sudo useradd --system --home /opt/inventory-backend --shell /usr/sbin/nologin inventory
+sudo mkdir -p /opt/inventory-backend /var/lib/inventory-backend/reports-storage
+sudo chown -R inventory:inventory /opt/inventory-backend /var/lib/inventory-backend
+
+sudo cp "$(find target -maxdepth 1 -name 'inventory-backend-*.jar' ! -name '*.original' | head -n1)" /opt/inventory-backend/app.jar
+sudo cp .env.example /opt/inventory-backend/.env
+sudo chown inventory:inventory /opt/inventory-backend/app.jar /opt/inventory-backend/.env
+sudo chmod 640 /opt/inventory-backend/.env
+```
+
+### 4. Configurar variables
+
+Edita `/opt/inventory-backend/.env` con valores reales:
+
+```env
+DB_URL=jdbc:postgresql://127.0.0.1:5432/SERVI
+DB_USER=postgres
+DB_PASSWORD=tu_password
+JWT_SECRET=tu_secreto_jwt_muy_seguro_de_64_chars_o_mas
+APP_CORS_ORIGINS=https://tu-frontend.com
+DDL_AUTO=validate
+SERVER_PORT=8080
+REPORTS_STORAGE_PATH=/var/lib/inventory-backend/reports-storage
+```
+
+### 5. Registrar el servicio
+
+El repositorio incluye una unidad base en `deploy/inventory-backend.service`.
+
+```bash
+sudo cp deploy/inventory-backend.service /etc/systemd/system/inventory-backend.service
+sudo systemctl daemon-reload
+sudo systemctl enable --now inventory-backend
+```
+
+### 6. Verificar
+
+```bash
+sudo systemctl status inventory-backend --no-pager
+curl http://localhost:8080/actuator/health
+curl http://localhost:8080/actuator/health/readiness
+```
+
+### 7. Logs
+
+```bash
+journalctl -u inventory-backend -f
+```
 
 ---
 
@@ -186,7 +263,8 @@ src/main/resources/
 3. Generar secreto JWT seguro: `openssl rand -base64 64`.
 4. Asegurarse de que `APP_CORS_ORIGINS` apunte al dominio del frontend.
 5. Verificar `http://localhost:8080/actuator/health/readiness`.
-6. Activar HTTPS mediante un proxy inverso (Nginx, Traefik, etc.).
+6. Si se despliega sin Docker, registrar el backend como servicio `systemd`.
+7. Activar HTTPS mediante un proxy inverso (Nginx, Traefik, etc.).
 
 ---
 
